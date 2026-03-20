@@ -281,8 +281,9 @@ Actual = ₹400
 ---
 
 # 🚨 Adversarial Defense & Anti-Spoofing Strategy
+<img width="2816" height="1536" alt="devtrails" src="https://github.com/user-attachments/assets/7a23958d-f20d-4af0-875e-95a7b6a60736" />
 
-## 1️⃣ Differentiation
+## 1️⃣ Differentiation!
 
 We differentiate real vs fake users using:
 
