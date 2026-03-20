@@ -331,7 +331,7 @@ We ensure fairness:
 
 # 🧠 Tech Stack
 
-* Frontend: React / Flutter
+* Frontend: React.js
 * Backend: Node.js / FastAPI
 * ML: Python (Scikit-learn, XGBoost)
 * APIs: Weather API, Maps API
