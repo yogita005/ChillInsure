@@ -2,6 +2,7 @@
 
 ### *AI-Powered Income Protection for Gig Workers*
 
+## Checkout the prototype here: https://chill-insure.vercel.app/
 ---
 
 ## 📌 Problem Statement
