@@ -19,6 +19,8 @@ Despite this, they lack:
 * ❌ Real-time compensation
 
 ---
+<img width="1920" height="1080" alt="devtrails" src="https://github.com/user-attachments/assets/4917c2f4-55ee-43ce-8c48-2944d73cbbee" />
+
 
 ## 🎯 Our Solution
 
