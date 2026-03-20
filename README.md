@@ -334,7 +334,8 @@ We ensure fairness:
 * Frontend: React.js
 * Backend: Node.js / FastAPI
 * ML: Python (Scikit-learn, XGBoost)
-* APIs: Weather API, Maps API
+* Databases: PostgreSQL (Core Data), InfluxDB (Time-Series), Redis (Caching).
+* APIs: Weather APIs, AQI APIs, Maps APIs
 * Payments: Razorpay (simulated)
 
 ---
