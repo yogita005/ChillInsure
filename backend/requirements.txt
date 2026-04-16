@@ -2,7 +2,7 @@
 # FastAPI Framework
 fastapi==0.104.1
 uvicorn[standard]==0.24.0
-pydantic==2.5.0
+pydantic>=2.11.7
 pydantic-settings==2.1.0
 email-validator==2.3.0
 
@@ -21,7 +21,7 @@ cryptography==41.0.7
 python-multipart==0.0.6
 
 # API & HTTP
-httpx==0.25.2
+httpx>=0.26,<0.29
 aiohttp==3.9.1
 resend>=0.7.0
 
