@@ -57,7 +57,7 @@ export function GeoMap({
   zoneLat,
   zoneLng,
   zoneName = "Delivery Zone",
-  zoneRadius = 500,
+  zoneRadius = 800,  // Increased from 500m to 800m to match backend zone definitions
 }: GeoMapProps) {
   const [polylineCoords, setPolylineCoords] = useState<[number, number][]>([]);
   const [pointsInZone, setPointsInZone] = useState<GPSPoint[]>([]);
@@ -209,13 +209,25 @@ export function GeoMap({
 }
 
 // Map legend/info component
-export function MapLegend({ gpsTrail = [] }: { gpsTrail?: GPSPoint[] }) {
+export function MapLegend({ 
+  gpsTrail = [], 
+  zoneLat = 13.0827, 
+  zoneLng = 77.6055, 
+  zoneRadius = 750,
+  storeAgentData = null
+}: { 
+  gpsTrail?: GPSPoint[], 
+  zoneLat?: number, 
+  zoneLng?: number, 
+  zoneRadius?: number,
+  storeAgentData?: any
+}) {
   // Calculate zone scanning stats using the same logic as the map
   const inZonePoints = gpsTrail.filter((p) =>
-    isPointInZone(p.lat, p.lng, 13.0827, 77.6055, 750)
+    isPointInZone(p.lat, p.lng, zoneLat, zoneLng, zoneRadius)
   );
   const outZonePoints = gpsTrail.filter(
-    (p) => !isPointInZone(p.lat, p.lng, 13.0827, 77.6055, 750)
+    (p) => !isPointInZone(p.lat, p.lng, zoneLat, zoneLng, zoneRadius)
   );
 
   const inZonePercentage =
@@ -236,48 +248,90 @@ export function MapLegend({ gpsTrail = [] }: { gpsTrail?: GPSPoint[] }) {
     verdictColor = "text-amber-600";
   }
 
+  // Extract store data if available
+  const storeCount = storeAgentData?.store_count || 0;
+  const storesDisrupted = storeAgentData?.stores_disrupted || 0;
+  const storeVerdict = storeAgentData?.verdict || "N/A";
+
   return (
-    <div className="bg-card rounded-lg border border-border p-4 space-y-3 text-xs">
-      <div>
-        <h4 className="font-semibold mb-3">🔍 Zone Agent Scan Results</h4>
-        <div className={`inline-block px-3 py-1 rounded font-bold mb-3 ${verdictColor}`}>
-          Verdict: <span className={verdictColor}>{agentVerdict}</span>
-        </div>
-      </div>
-
-      <div className="space-y-2 bg-muted/30 rounded p-2.5">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-green-600" />
-            <span className="font-medium">Inside Zone</span>
+    <div className="space-y-3">
+      <div className="bg-card rounded-lg border border-border p-4 space-y-3 text-xs">
+        <div>
+          <h4 className="font-semibold mb-3">🔍 Zone Agent Scan Results</h4>
+          <div className={`inline-block px-3 py-1 rounded font-bold mb-3 ${verdictColor}`}>
+            Verdict: <span className={verdictColor}>{agentVerdict}</span>
           </div>
-          <span className="font-mono font-bold text-green-600">{inZonePoints.length}</span>
         </div>
 
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-red-600" />
-            <span className="font-medium">Outside Zone</span>
+        <div className="space-y-2 bg-muted/30 rounded p-2.5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-green-600" />
+              <span className="font-medium">Inside Zone</span>
+            </div>
+            <span className="font-mono font-bold text-green-600">{inZonePoints.length}</span>
           </div>
-          <span className="font-mono font-bold text-red-600">{outZonePoints.length}</span>
+
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-red-600" />
+              <span className="font-medium">Outside Zone</span>
+            </div>
+            <span className="font-mono font-bold text-red-600">{outZonePoints.length}</span>
+          </div>
+
+          <div className="flex items-center justify-between pt-1 border-t border-border">
+            <span className="font-medium">Coverage</span>
+            <span className="font-mono font-bold text-primary">{inZonePercentage}%</span>
+          </div>
         </div>
 
-        <div className="flex items-center justify-between pt-1 border-t border-border">
-          <span className="font-medium">Coverage</span>
-          <span className="font-mono font-bold text-primary">{inZonePercentage}%</span>
+        <div className="space-y-1.5 text-muted-foreground">
+          <div className="flex justify-between">
+            <span>Total GPS Points:</span>
+            <span className="font-mono font-semibold text-foreground">{gpsTrail.length}</span>
+          </div>
+          <div className="flex justify-between">
+            <span>Avg GPS Accuracy:</span>
+            <span className="font-mono font-semibold text-foreground">±{avgAccuracy}m</span>
+          </div>
         </div>
       </div>
 
-      <div className="space-y-1.5 text-muted-foreground">
-        <div className="flex justify-between">
-          <span>Total GPS Points:</span>
-          <span className="font-mono font-semibold text-foreground">{gpsTrail.length}</span>
+      {/* Store Agent Verification */}
+      {storeCount > 0 && (
+        <div className="bg-card rounded-lg border border-border p-4 space-y-3 text-xs">
+          <div>
+            <h4 className="font-semibold mb-3">🏪 Store Agent Verification</h4>
+            <div className={`inline-block px-3 py-1 rounded font-bold mb-3 ${
+              storeVerdict === "PAY" ? "bg-green-500/20 text-green-600" :
+              storeVerdict === "PARTIAL" ? "bg-amber-500/20 text-amber-600" :
+              "bg-red-500/20 text-red-600"
+            }`}>
+              Verdict: <span>{storeVerdict}</span>
+            </div>
+          </div>
+
+          <div className="space-y-2 bg-muted/30 rounded p-2.5">
+            <div className="flex items-center justify-between">
+              <span className="font-medium">Dark Stores in Zone</span>
+              <span className="font-mono font-bold text-primary">{storeCount}</span>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <span className="font-medium">Disrupted Stores</span>
+              <span className="font-mono font-bold text-coral">{storesDisrupted}</span>
+            </div>
+
+            <div className="flex items-center justify-between pt-1 border-t border-border">
+              <span className="font-medium">Operations Status</span>
+              <span className="font-mono font-bold text-amber">
+                {storeCount > 0 ? `${((storesDisrupted / storeCount) * 100).toFixed(0)}% affected` : "N/A"}
+              </span>
+            </div>
+          </div>
         </div>
-        <div className="flex justify-between">
-          <span>Avg GPS Accuracy:</span>
-          <span className="font-mono font-semibold text-foreground">±{avgAccuracy}m</span>
-        </div>
-      </div>
+      )}
 
       <div className="pt-2 mt-2 border-t border-border space-y-2">
         <div className="text-[11px] font-semibold text-primary">Map Legend:</div>

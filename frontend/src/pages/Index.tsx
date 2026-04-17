@@ -29,12 +29,16 @@ const Index = () => {
     setShowOnboarding(true);
   };
 
-  const handleOnboardingComplete = (userId: string, policyId: string) => {
-    console.log('🎉 Onboarding complete!', { userId, policyId });
+  const handleOnboardingComplete = (userId: string, policyId: string, userName: string, planName: string, coverageAmount: number, registrationDate: string) => {
+    console.log('🎉 Onboarding complete!', { userId, policyId, userName, planName, coverageAmount });
     // Save to localStorage
     localStorage.setItem('userId', userId);
     localStorage.setItem('policyId', policyId);
-    console.log('✅ Saved to localStorage:', { userId, policyId });
+    localStorage.setItem('userName', userName);
+    localStorage.setItem('planName', planName);
+    localStorage.setItem('coverageAmount', coverageAmount.toString());
+    localStorage.setItem('registrationDate', registrationDate);
+    console.log('✅ Saved to localStorage:', { userId, policyId, userName, planName, coverageAmount, registrationDate });
     console.log('📍 Navigating to /dashboard...');
     navigate('/dashboard');
   };

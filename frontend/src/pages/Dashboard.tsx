@@ -2,19 +2,29 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   Shield, LayoutDashboard, FileText, Banknote, AlertTriangle,
-  ChevronLeft, User, Zap, Brain, Menu, X, LogOut
+  ChevronLeft, User, Zap, Brain, Menu, X, LogOut, BarChart3, Settings,
+  TrendingUp, Users, MapPin
 } from "lucide-react";
-import { DashboardOverview } from "@/components/dashboard/DashboardOverview";
+import { WorkerDashboard } from "@/components/dashboard/WorkerDashboard";
 import { ClaimsView } from "@/components/dashboard/ClaimsView";
 import { PayoutsView } from "@/components/dashboard/PayoutsView";
 import { AlertsView } from "@/components/dashboard/AlertsView";
 import { ClaimSimulation } from "@/components/dashboard/ClaimSimulation";
 import { useUserProfile } from "@/hooks/use-dashboard";
+import {
+  AdminAnalytics,
+  LossRatios,
+  PredictiveAlerts,
+  WorkerStats,
+  ZonePerformance,
+  ActiveClaims,
+  WorkersByZone,
+} from "@/components/dashboard/admin";
 
+type UserRole = "worker" | "admin";
+type Tab = "overview" | "simulate" | "claims" | "payouts" | "alerts" | "admin-overview" | "analytics" | "admin-claims" | "zones" | "admin-alerts" | "workers" | "drivers";
 
-type Tab = "overview" | "simulate" | "claims" | "payouts" | "alerts";
-
-const navGroups = [
+const workerNavGroups = [
   {
     label: "MONITOR",
     items: [
@@ -37,9 +47,39 @@ const navGroups = [
   },
 ];
 
+const adminNavGroups = [
+  {
+    label: "ADMIN",
+    items: [
+      { id: "admin-overview" as Tab, label: "Overview", icon: BarChart3 },
+      { id: "analytics" as Tab, label: "Analytics", icon: TrendingUp },
+      { id: "admin-claims" as Tab, label: "Active Claims", icon: AlertTriangle },
+      { id: "zones" as Tab, label: "Zones", icon: MapPin },
+      { id: "admin-alerts" as Tab, label: "Alerts", icon: Zap },
+      { id: "workers" as Tab, label: "Workers", icon: Users },
+      { id: "drivers" as Tab, label: "Drivers by Area", icon: MapPin },
+    ],
+  },
+];
+
 const Dashboard = () => {
   const navigate = useNavigate();
-  const [active, setActive] = useState<Tab>("overview");
+  const [userRole, setUserRole] = useState<UserRole>(() => {
+    // Check if user is admin from localStorage
+    const storedRole = localStorage.getItem('userRole');
+    if (storedRole === 'admin') {
+      return 'admin';
+    }
+    return 'worker';
+  });
+  const [active, setActive] = useState<Tab>(() => {
+    // Set initial tab based on role
+    const storedRole = localStorage.getItem('userRole');
+    if (storedRole === 'admin') {
+      return 'admin-overview';
+    }
+    return 'overview';
+  });
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
   const { profile, loading: profileLoading } = useUserProfile();
@@ -57,11 +97,15 @@ const Dashboard = () => {
 
   const userName = profile?.name || (profileLoading ? "Loading…" : "User");
   const userPlatform = profile?.platform ? `${profile.platform} Partner` : (profileLoading ? "" : "Gig Worker");
+  
+  // Get user name from localStorage
+  const displayUserName = userRole === "admin" ? "Operations Team" : (localStorage.getItem('userName') || "Arjun Mehta");
 
   const handleLogout = () => {
     // Clear all session data
     localStorage.removeItem('userId');
     localStorage.removeItem('policyId');
+    localStorage.removeItem('userRole');
     localStorage.removeItem('accessToken');
     // Redirect to landing page
     navigate('/', { replace: true });
@@ -101,7 +145,7 @@ const Dashboard = () => {
 
         {/* Nav groups */}
         <nav className="flex-1 py-4 px-3 space-y-5 overflow-y-auto">
-          {navGroups.map((group) => (
+          {(userRole === "worker" ? workerNavGroups : adminNavGroups).map((group) => (
             <div key={group.label}>
               <p className="text-[10px] font-semibold text-muted-foreground tracking-widest uppercase px-3 mb-2">
                 {group.label}
@@ -166,13 +210,19 @@ const Dashboard = () => {
               <Brain className="w-3.5 h-3.5 text-primary" />
               AI Council Active
             </div>
+            
+
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center">
                 <User className="w-4 h-4 text-primary" />
               </div>
               <div className="hidden sm:block">
-                <p className="text-sm font-medium leading-none">{userName}</p>
-                <p className="text-xs text-muted-foreground">{userPlatform}</p>
+                <p className="text-sm font-medium leading-none">
+                  {displayUserName}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {userRole === "admin" ? "Admin" : "GigWorker"}
+                </p>
               </div>
             </div>
             <button
@@ -186,12 +236,26 @@ const Dashboard = () => {
         </header>
 
         {/* Content */}
-        <main className="flex-1 p-4 sm:p-6 max-w-6xl w-full mx-auto">
-          {active === "overview" && <DashboardOverview />}
-          {active === "simulate" && <ClaimSimulation />}
-          {active === "claims" && <ClaimsView />}
-          {active === "payouts" && <PayoutsView />}
-          {active === "alerts" && <AlertsView />}
+        <main className="flex-1 p-4 sm:p-6 max-w-7xl w-full mx-auto">
+          {userRole === "admin" ? (
+            <>
+              {active === "admin-overview" && <AdminAnalytics />}
+              {active === "analytics" && <LossRatios />}
+              {active === "admin-claims" && <ActiveClaims />}
+              {active === "zones" && <ZonePerformance />}
+              {active === "admin-alerts" && <PredictiveAlerts />}
+              {active === "workers" && <WorkerStats />}
+              {active === "drivers" && <WorkersByZone />}
+            </>
+          ) : (
+            <>
+              {active === "overview" && <WorkerDashboard />}
+              {active === "simulate" && <ClaimSimulation />}
+              {active === "claims" && <ClaimsView />}
+              {active === "payouts" && <PayoutsView />}
+              {active === "alerts" && <AlertsView />}
+            </>
+          )}
         </main>
       </div>
     </div>

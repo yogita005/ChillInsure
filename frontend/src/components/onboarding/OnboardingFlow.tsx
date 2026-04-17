@@ -8,11 +8,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { OTPVerification } from './OTPVerification';
 
-type Step = 'auth-mode' | 'register' | 'password-display' | 'login' | 'otp' | 'loading' | 'plans' | 'checkout' | 'success';
-type AuthMode = 'register' | 'login';
+type Step = 'auth-mode' | 'register' | 'login' | 'admin-login' | 'otp' | 'loading' | 'plans' | 'checkout' | 'success';
+type AuthMode = 'register' | 'login' | 'admin';
 
 interface OnboardingFlowProps {
-  onComplete: (userId: string, policyId: string) => void;
+  onComplete: (userId: string, policyId: string, userName: string, planName: string, coverageAmount: number, registrationDate: string) => void;
 }
 
 export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
@@ -136,9 +136,23 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
       setRegisteredEmail(email);
       setStep('loading');
 
-      // Fetch GigScore and proceed to plans
+      // Fetch GigScore and user profile data to proceed to plans
       setTimeout(async () => {
         try {
+          // Fetch user profile to get their name
+          const userResponse = await fetch(`${API_URL}/api/users/me`, {
+            headers: {
+              'Authorization': `Bearer ${data.access_token}`,
+            },
+          });
+          
+          if (userResponse.ok) {
+            const userData = await userResponse.json();
+            if (userData.name) {
+              setName(userData.name);
+            }
+          }
+
           const gigScoreResponse = await fetch(`${API_URL}/api/gigscore/me`, {
             headers: {
               'Authorization': `Bearer ${data.access_token}`,
@@ -249,6 +263,30 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
     };
   };
 
+  const handleAdminLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+
+    // Hardcoded admin credentials
+    const ADMIN_EMAIL = 'TNadmin@chillinsure.com';
+    const ADMIN_PASSWORD = 'TNAdmin@123';
+
+    if (email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
+      // Direct admin access - save as admin user
+      const adminUserId = 'admin-' + Date.now();
+      setAccessToken('admin-token');
+      setUserId(adminUserId);
+      localStorage.setItem('accessToken', 'admin-token');
+      localStorage.setItem('userId', adminUserId);
+      localStorage.setItem('userRole', 'admin');
+      
+      // Redirect directly to admin dashboard
+      onComplete(adminUserId, 'admin-policy', 'Operations Team', 'Admin Plan', 0, new Date().toISOString());
+    } else {
+      setError('Invalid admin credentials');
+    }
+  };
+
   const handleOTPSuccess = (token: string, uid: string) => {
     setAccessToken(token);
     setUserId(uid);
@@ -261,6 +299,20 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
     setTimeout(async () => {
       try {
         const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+        
+        // Fetch user profile to ensure we have their name
+        const userResponse = await fetch(`${API_URL}/api/users/me`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+        
+        if (userResponse.ok) {
+          const userData = await userResponse.json();
+          if (userData.name) {
+            setName(userData.name);
+          }
+        }
         
         // Fetch GigScore to show user their risk profile
         const gigScoreResponse = await fetch(`${API_URL}/api/gigscore/me`, {
@@ -457,7 +509,8 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
       // Redirect after 2 seconds
       const timer = setTimeout(() => {
         if (userId && result.policyId) {
-          onComplete(userId, result.policyId);
+          const registrationDate = new Date().toISOString();
+          onComplete(userId, result.policyId, name, selectedPlanName, selectedCoverageAmount, registrationDate);
         }
       }, 2000);
 
@@ -514,54 +567,18 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
                 variant="outline"
                 className="w-full border-slate-600/50 text-gray-200 hover:bg-slate-700/50 hover:border-slate-500 py-6 text-base font-medium rounded-xl transition-all duration-200 hover:scale-[1.01] active:scale-[0.99]"
               >
-                Sign In Existing Account
+                Sign In as Partner
               </Button>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Step 1: Password Display */}
-        {step === 'password-display' && (
-          <Card className="bg-slate-800/80 backdrop-blur-xl border-slate-700/50 shadow-2xl shadow-black/20">
-            <CardHeader className="pt-8">
-              <CardTitle className="text-white">Save Your Password</CardTitle>
-              <CardDescription className="text-gray-400">You'll need this to log in later</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="bg-blue-500/10 border border-blue-500/20 p-4 rounded-lg space-y-3">
-                <p className="text-sm text-gray-300">
-                  <span className="font-semibold text-blue-400">Email:</span> {registeredEmail}
-                </p>
-                <div>
-                  <p className="text-sm text-gray-300 mb-2">
-                    <span className="font-semibold text-blue-400">Password:</span>
-                  </p>
-                  <div className="flex items-center gap-2 bg-slate-900 p-3 rounded border border-slate-600">
-                    <code className="text-green-400 font-mono text-lg flex-1">{generatedPassword}</code>
-                    <Button
-                      type="button"
-                      size="sm"
-                      onClick={() => {
-                        navigator.clipboard.writeText(generatedPassword);
-                        // You could add a toast here
-                      }}
-                      className="bg-green-600 hover:bg-green-700 text-white"
-                    >
-                      Copy
-                    </Button>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-yellow-500/10 border border-yellow-500/20 p-3 rounded-lg text-sm text-yellow-300">
-                ⚠️ Write this down or copy it now. We can't show it again!
-              </div>
-
               <Button
-                onClick={() => setStep('otp')}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                onClick={() => {
+                  setAuthMode('admin');
+                  setStep('admin-login');
+                  setError('');
+                }}
+                variant="outline"
+                className="w-full border-purple-600 text-purple-400 hover:bg-purple-950 py-6 text-lg"
               >
-                Continue to Verification
+                Admin Login
               </Button>
             </CardContent>
           </Card>
@@ -615,6 +632,63 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
                   className="w-full bg-green-600 hover:bg-green-700 text-white"
                 >
                   Sign In
+                </Button>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setStep('auth-mode')}
+                  className="w-full border-slate-600 text-gray-300 hover:bg-slate-700"
+                >
+                  Back
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Step: Admin Login */}
+        {step === 'admin-login' && (
+          <Card className="bg-slate-800 border-purple-700/50">
+            <CardHeader>
+              <CardTitle className="text-purple-400 text-center">Admin Login</CardTitle>
+              <CardDescription className="text-gray-400">ChillInsure Administration Access</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleAdminLogin} className="space-y-4">
+                {error && (
+                  <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-3 rounded-lg text-sm">
+                    {error}
+                  </div>
+                )}
+
+                <div>
+                  <label className="text-sm text-gray-300 block mb-1">Email</label>
+                  <Input
+                    type="email"
+                    placeholder="admin@chillinsure.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="bg-slate-700 border-slate-600 text-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-sm text-gray-300 block mb-1">Password</label>
+                  <Input
+                    type="password"
+                    placeholder="Enter admin password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="bg-slate-700 border-slate-600 text-white"
+                  />
+                </div>
+
+                <Button
+                  type="submit"
+                  className="w-full bg-purple-600 hover:bg-purple-700 text-white"
+                >
+                  Admin Login
                 </Button>
 
                 <Button

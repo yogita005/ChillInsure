@@ -3,7 +3,7 @@ import { CheckCircle2 as CheckCircle2Icon } from "lucide-react";
 import {
   CloudRain, Wind, AlertTriangle, MapPin, Briefcase,
   Timer, Globe, ShieldCheck, Play, RotateCcw, CheckCircle2 as CheckCircle2Badge,
-  XCircle, Minus, Zap, ArrowRight, Radio
+  XCircle, Minus, Zap, ArrowRight, Radio, Store, AlertOctagon
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -133,14 +133,15 @@ function generateMockGPSTrail(lat: number, lng: number, hours: number = 2) {
   const now = new Date();
   const startTime = new Date(now.getTime() - hours * 60 * 60 * 1000);
   
-  // Create a realistic path with multiple waypoints
+  // Create a realistic path with multiple waypoints WITHIN the zone
+  // 0.005 degrees ≈ 555m, so waypoints stay within zone (750-900m radius)
   const waypoints = [];
   const numWaypoints = 4;
   
   for (let w = 0; w < numWaypoints; w++) {
     waypoints.push({
-      lat: lat + (Math.random() - 0.5) * 0.015,
-      lng: lng + (Math.random() - 0.5) * 0.015,
+      lat: lat + (Math.random() - 0.5) * 0.005,  // Reduced from 0.015 to 0.005 (±555m instead of ±1665m)
+      lng: lng + (Math.random() - 0.5) * 0.005,
     });
   }
 
@@ -155,10 +156,10 @@ function generateMockGPSTrail(lat: number, lng: number, hours: number = 2) {
     const interpolation = ((i / (hours * 4)) * numWaypoints) % 1;
     
     trail.push({
-      lat: currentWaypoint.lat + (nextWaypoint.lat - currentWaypoint.lat) * interpolation + (Math.random() - 0.5) * 0.001,
-      lng: currentWaypoint.lng + (nextWaypoint.lng - currentWaypoint.lng) * interpolation + (Math.random() - 0.5) * 0.001,
+      lat: currentWaypoint.lat + (nextWaypoint.lat - currentWaypoint.lat) * interpolation + (Math.random() - 0.5) * 0.0005,  // Reduced noise
+      lng: currentWaypoint.lng + (nextWaypoint.lng - currentWaypoint.lng) * interpolation + (Math.random() - 0.5) * 0.0005,
       timestamp: time.toISOString(),
-      accuracy: Math.random() * 25 + 8, // 8-33m accuracy
+      accuracy: Math.random() * 20 + 10, // 10-30m accuracy (better GPS)
     });
   }
 
@@ -173,6 +174,8 @@ function convertAgentDecisions(apiDecisions: any[]): AgentState[] {
     behavior: Timer,
     reality: Globe,
     trust: ShieldCheck,
+    store: Store,
+    fraud: AlertOctagon,
   };
 
   return apiDecisions.map((decision) => {
@@ -191,6 +194,8 @@ function convertAgentDecisions(apiDecisions: any[]): AgentState[] {
       icon: iconMap[decision.agentId] || MapPin,
       role: decision.agentName === "Zone Agent" ? "Geofence validation"
         : decision.agentName === "Work Agent" ? "Activity cross-check"
+        : decision.agentName === "Store Agent" ? "Dark store disruption"
+        : decision.agentName === "Fraud Agent" ? "Fraud detection"
         : decision.agentName === "Behavior Agent" ? "Anomaly detection"
         : decision.agentName === "Reality Agent" ? "Environmental corroboration"
         : "Credibility & fraud analysis",
@@ -407,6 +412,9 @@ export function ClaimSimulation() {
   const [gpsTrail, setGpsTrail] = useState<any[]>([]);
   const [showWalletModal, setShowWalletModal] = useState(false);
   const [showRazorpay, setShowRazorpay] = useState(false);
+  const [autoMode, setAutoMode] = useState(false);
+  const [processedCount, setProcessedCount] = useState(0);
+  const [autoTrigger, setAutoTrigger] = useState<string | null>(null);
 
   const { verifyClaim, loading: verifying, error } = useClaimVerification();
   const trigger = triggers.find((t) => t.id === selectedTrigger);
@@ -423,6 +431,7 @@ export function ClaimSimulation() {
     setGpsTrail([]);
     setShowWalletModal(false);
     setShowRazorpay(false);
+    setAutoTrigger(null);
   }, []);
 
   const handleDisburse = useCallback(() => {
@@ -430,16 +439,6 @@ export function ClaimSimulation() {
       setShowRazorpay(true);
     }
   }, [verdict]);
-
-  // Auto-trigger payout 2 seconds after verdict is reached
-  useEffect(() => {
-    if (step === "verdict" && (verdict === "PAY" || verdict === "PARTIAL")) {
-      const timer = setTimeout(() => {
-        handleDisburse();
-      }, 2000);
-      return () => clearTimeout(timer);
-    }
-  }, [step, verdict, handleDisburse]);
 
   /* Detection phase */
   useEffect(() => {
@@ -515,29 +514,36 @@ export function ClaimSimulation() {
     }
   }, [step, detectProgress, selectedTrigger, verifyClaim]);
 
-  /* Council agent display animation */
+  /* Council agent display animation - animate through agents for visual effect */
   useEffect(() => {
-    if (step !== "council" || activeAgentIdx < 0 || activeAgentIdx >= agents.length) return;
+    if (step !== "council" || activeAgentIdx < 0 || agents.length === 0) return;
     
-    // Animate through agents
-    setAgents((prev) =>
-      prev.map((a, i) => (i === activeAgentIdx ? { ...a, status: "verifying" } : a))
-    );
+    // Since backend returns all agents with verdicts already, skip to verdict immediately
+    if (agents.every(a => a.status === "done") && agents.length > 0) {
+      const timer = setTimeout(() => setStep("verdict"), 800);
+      return () => clearTimeout(timer);
+    }
+    
+    // Fallback animation (in case any agent status isn't done)
+    if (activeAgentIdx >= agents.length) {
+      setStep("verdict");
+      return;
+    }
+    
+    // Get current agent duration from state snapshot
+    const currentAgent = agents[activeAgentIdx];
+    if (!currentAgent) return;
 
     const timer = setTimeout(() => {
-      setAgents((prev) =>
-        prev.map((a, i) => (i === activeAgentIdx ? { ...a, status: "done" } : a))
-      );
-      
       if (activeAgentIdx < agents.length - 1) {
         setActiveAgentIdx((idx) => idx + 1);
       } else {
-        setTimeout(() => setStep("verdict"), 500);
+        setStep("verdict");
       }
-    }, agents[activeAgentIdx]?.duration || 1500);
+    }, currentAgent.duration || 1500);
 
     return () => clearTimeout(timer);
-  }, [step, activeAgentIdx, agents]);
+  }, [step, activeAgentIdx, agents.length, agents]);
 
   const doneAgents = agents.filter((a) => a.status === "done");
   const payCount = agents.filter((a) => a.vote === "PAY").length;
@@ -551,6 +557,45 @@ export function ClaimSimulation() {
       return () => clearTimeout(timer);
     }
   }, [step, agents.length, doneAgents.length]);
+
+  // Auto-trigger mode: pick initial trigger when auto mode starts
+  useEffect(() => {
+    if (!autoMode || autoTrigger || step !== "select") return;
+
+    // Pick ONE random trigger at the start
+    const randomIdx = Math.floor(Math.random() * triggers.length);
+    const selectedTriggerId = triggers[randomIdx].id;
+    setAutoTrigger(selectedTriggerId);
+    setSelectedTrigger(selectedTriggerId);
+  }, [autoMode, autoTrigger, step, triggers]);
+
+  // Auto-trigger mode: automatically disburse at verdict
+  useEffect(() => {
+    if (!autoMode || step !== "verdict" || !verdict) return;
+
+    // Wait 2 seconds at verdict, then auto-disburse
+    const timer = setTimeout(() => {
+      if (verdict === "PAY" || verdict === "PARTIAL") {
+        setShowRazorpay(true);
+        setProcessedCount((c) => c + 1);
+      }
+    }, 2000); // Wait 2s at verdict before disbursing
+    
+    return () => clearTimeout(timer);
+  }, [autoMode, step, verdict]);
+
+  // Auto-trigger mode: continuously process claims with the same trigger
+  useEffect(() => {
+    if (!autoMode || !autoTrigger) return;
+
+    // When trigger is set and we're on select step, start detecting
+    if (step === "select" && autoTrigger) {
+      const timer = setTimeout(() => {
+        setStep("detecting");
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [step, autoMode, autoTrigger]);
   
   // Show error state
   if (error && step !== "select") {
@@ -593,17 +638,58 @@ export function ClaimSimulation() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="font-display font-bold text-lg mb-1">Claim Simulation</h2>
+          <h2 className="font-display font-bold text-lg mb-1">
+            Claim Simulation
+            {autoMode && (
+              <span className="ml-3 inline-flex items-center gap-1.5 px-3 py-1 text-xs font-bold bg-primary/10 text-primary rounded-full animate-pulse">
+                <span className="w-2 h-2 bg-primary rounded-full"></span>
+                AUTO MODE • {processedCount} claims
+              </span>
+            )}
+          </h2>
           <p className="text-sm text-muted-foreground">
             Watch the AI Council process a live parametric claim in real-time
           </p>
         </div>
-        {step !== "select" && (
-          <Button variant="outline" size="sm" onClick={reset}>
-            <RotateCcw className="w-3.5 h-3.5 mr-1.5" />
-            Reset
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          {step === "select" && (
+            <Button
+              variant={autoMode ? "default" : "outline"}
+              size="sm"
+              onClick={() => {
+                if (autoMode) {
+                  setAutoMode(false);
+                  reset();
+                } else {
+                  setAutoMode(true);
+                  setProcessedCount(0);
+                }
+              }}
+              className={autoMode ? "gap-2" : "gap-2"}
+            >
+              {autoMode ? (
+                <>
+                  <span className="w-2 h-2 bg-white rounded-full animate-pulse"></span>
+                  Stop Auto
+                </>
+              ) : (
+                <>
+                  <Zap className="w-3.5 h-3.5" />
+                  Auto Trigger
+                </>
+              )}
+            </Button>
+          )}
+          {step !== "select" && (
+            <Button variant="outline" size="sm" onClick={() => {
+              setAutoMode(false);
+              reset();
+            }}>
+              <RotateCcw className="w-3.5 h-3.5 mr-1.5" />
+              Reset
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Step progress */}
@@ -638,74 +724,74 @@ export function ClaimSimulation() {
       </div>
 
       {/* ─── Step 1: Select ─── */}
-      {step === "select" && (
+      {step === "select" && !autoMode && (
         <div className="space-y-6">
           <div>
             <h3 className="text-sm font-display font-bold mb-4">Available Problems to Test</h3>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {triggers.map((t) => {
-                const isSelected = selectedTrigger === t.id;
-                const severityColor = {
-                  critical: "border-coral bg-coral-light/30",
-                  high: "border-amber bg-amber-light/20",
-                  medium: "border-primary bg-primary/5",
-                };
-                return (
-                  <button
-                    key={t.id}
-                    onClick={() => setSelectedTrigger(t.id)}
-                    className={`text-left rounded-xl p-4 border-2 transition-all duration-200 active:scale-[0.97] flex flex-col ${
-                      isSelected
-                        ? severityColor[t.severity as keyof typeof severityColor] + " border-2"
-                        : "border-border bg-card hover:border-muted-foreground/20"
-                    }`}
-                  >
-                    <div className="flex items-start justify-between mb-2">
-                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                        isSelected ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground"
-                      }`}>
-                        <t.icon className="w-5 h-5" />
-                      </div>
-                      <div className={`px-2 py-1 rounded text-[10px] font-bold uppercase ${
-                        t.severity === "critical" ? "bg-coral text-white"
-                        : t.severity === "high" ? "bg-amber text-black"
-                        : "bg-primary text-white"
-                      }`}>
-                        {t.severity}
-                      </div>
-                    </div>
-                    <h4 className="font-display font-semibold text-sm mb-1">{t.label}</h4>
-                    <p className="text-xs text-muted-foreground mb-2">{t.location}</p>
-                    <p className="text-[11px] text-muted-foreground mb-2 flex-grow">{t.detail}</p>
-                    <div className="flex items-center justify-between pt-2 border-t border-border/40">
-                      <span className="text-[11px] font-semibold text-primary">{t.impact}</span>
-                      <span className="text-xs font-bold text-foreground">{t.expectedLoss}</span>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+                  {triggers.map((t) => {
+                    const isSelected = selectedTrigger === t.id;
+                    const severityColor = {
+                      critical: "border-coral bg-coral-light/30",
+                      high: "border-amber bg-amber-light/20",
+                      medium: "border-primary bg-primary/5",
+                    };
+                    return (
+                      <button
+                        key={t.id}
+                        onClick={() => setSelectedTrigger(t.id)}
+                        className={`text-left rounded-xl p-4 border-2 transition-all duration-200 active:scale-[0.97] flex flex-col ${
+                          isSelected
+                            ? severityColor[t.severity as keyof typeof severityColor] + " border-2"
+                            : "border-border bg-card hover:border-muted-foreground/20"
+                        }`}
+                      >
+                        <div className="flex items-start justify-between mb-2">
+                          <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                            isSelected ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground"
+                          }`}>
+                            <t.icon className="w-5 h-5" />
+                          </div>
+                          <div className={`px-2 py-1 rounded text-[10px] font-bold uppercase ${
+                            t.severity === "critical" ? "bg-coral text-white"
+                            : t.severity === "high" ? "bg-amber text-black"
+                            : "bg-primary text-white"
+                          }`}>
+                            {t.severity}
+                          </div>
+                        </div>
+                        <h4 className="font-display font-semibold text-sm mb-1">{t.label}</h4>
+                        <p className="text-xs text-muted-foreground mb-2">{t.location}</p>
+                        <p className="text-[11px] text-muted-foreground mb-2 flex-grow">{t.detail}</p>
+                        <div className="flex items-center justify-between pt-2 border-t border-border/40">
+                          <span className="text-[11px] font-semibold text-primary">{t.impact}</span>
+                          <span className="text-xs font-bold text-foreground">{t.expectedLoss}</span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
 
-          {selectedTrigger && (
-            <div className="space-y-4">
-              {/* Selected trigger details */}
-              {triggers.find((t) => t.id === selectedTrigger) && (
-                <div className="bg-primary/5 border border-primary/20 rounded-xl p-5 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <h4 className="font-display font-bold text-base">
-                      📍 {triggers.find((t) => t.id === selectedTrigger)?.location}
-                    </h4>
-                    <div className="text-xs text-muted-foreground font-mono">
-                      Lat: {triggers.find((t) => t.id === selectedTrigger)?.lat.toFixed(4)}, 
-                      Lng: {triggers.find((t) => t.id === selectedTrigger)?.lng.toFixed(4)}
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-3 gap-3 text-xs">
-                    <div className="bg-card rounded p-2 border border-border">
-                      <p className="text-muted-foreground font-semibold">Expected Earnings</p>
-                      <p className="font-bold text-primary">₹{triggers.find((t) => t.id === selectedTrigger)?.expectedEarnings}</p>
-                    </div>
+              {selectedTrigger && (
+                <div className="space-y-4">
+                  {/* Selected trigger details */}
+                  {triggers.find((t) => t.id === selectedTrigger) && (
+                    <div className="bg-primary/5 border border-primary/20 rounded-xl p-5 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <h4 className="font-display font-bold text-base">
+                          📍 {triggers.find((t) => t.id === selectedTrigger)?.location}
+                        </h4>
+                        <div className="text-xs text-muted-foreground font-mono">
+                          Lat: {triggers.find((t) => t.id === selectedTrigger)?.lat.toFixed(4)}, 
+                          Lng: {triggers.find((t) => t.id === selectedTrigger)?.lng.toFixed(4)}
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-3 gap-3 text-xs">
+                        <div className="bg-card rounded p-2 border border-border">
+                          <p className="text-muted-foreground font-semibold">Expected Earnings</p>
+                          <p className="font-bold text-primary">₹{triggers.find((t) => t.id === selectedTrigger)?.expectedEarnings}</p>
+                        </div>
                     <div className="bg-card rounded p-2 border border-border">
                       <p className="text-muted-foreground font-semibold">Actual Earnings</p>
                       <p className="font-bold">₹{triggers.find((t) => t.id === selectedTrigger)?.actualEarnings}</p>
@@ -733,6 +819,12 @@ export function ClaimSimulation() {
       {/* ─── Step 2: Detection ─── */}
       {step === "detecting" && trigger && (
         <div className="bg-card rounded-2xl border border-border p-6 space-y-5">
+          {autoMode && (
+            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-primary/10 border border-primary/20 w-fit text-xs font-bold text-primary">
+              <span className="w-2 h-2 bg-primary rounded-full animate-pulse"></span>
+              CLAIM #{processedCount + 1}
+            </div>
+          )}
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-xl bg-primary/20 border border-primary/30 flex items-center justify-center glow-pulse">
               <Radio className="w-5 h-5 text-primary" />
@@ -860,7 +952,7 @@ export function ClaimSimulation() {
                 <span className="text-coral font-semibold tabular-nums">{rejectCount} REJECT</span>
               </div>
               <p className="text-[11px] text-muted-foreground mt-2 tabular-nums">
-                {doneAgents.length}/5 agents reported
+                {doneAgents.length}/{agents.length} agents reported
               </p>
             </div>
 
@@ -873,14 +965,6 @@ export function ClaimSimulation() {
                   <div className="flex justify-between"><span className="text-muted-foreground">Est. Payout</span><span className="text-primary font-semibold">{trigger.expectedLoss}</span></div>
                 </div>
               </div>
-            )}
-
-            {/* Added Reset button for when verdict is done */}
-            {step === "verdict" && (
-              <Button onClick={reset} variant="outline" className="w-full mt-2 border-border/50 bg-card/50">
-                <RotateCcw className="w-4 h-4 mr-2" />
-                Try Another Simulation
-              </Button>
             )}
           </div>
 
@@ -896,90 +980,168 @@ export function ClaimSimulation() {
                   zoneRadius={750}
                 />
               </div>
-              <MapLegend gpsTrail={gpsTrail} />
+              <MapLegend 
+                gpsTrail={gpsTrail}
+                zoneLat={trigger.lat}
+                zoneLng={trigger.lng}
+                zoneRadius={750}
+                storeAgentData={
+                  // Extract Store Agent data if available
+                  agents.find(a => a.id === "store")?.finding ? {
+                    verdict: agents.find(a => a.id === "store")?.vote,
+                    store_count: parseInt(agents.find(a => a.id === "store")?.finding?.match(/(\d+)\s+dark store/i)?.[1] || "0"),
+                    stores_disrupted: parseInt(agents.find(a => a.id === "store")?.finding?.match(/(\d+)\s+disrupted/i)?.[1] || "0"),
+                  } : null
+                }
+              />
             </div>
           )}
         </div>
       )}
 
-      {/* ─── Modals (Wallet & Razorpay) ─── */}
-      {showWalletModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
-          <div className="bg-card border border-border rounded-2xl p-8 max-w-sm w-full mx-4 animate-in fade-in scale-in-95 duration-300">
-            <div className="text-center space-y-6">
-              <div className="flex justify-center">
-                <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center animate-bounce">
-                  <CheckCircle2Icon className="w-8 h-8 text-primary" />
-                </div>
-              </div>
-              
-              <div className="space-y-2">
-                <h3 className="font-display font-bold text-xl text-foreground">
-                  Claim Added to Wallet
-                </h3>
-                <p className="text-sm text-muted-foreground">
-                  Your payout has been successfully disbursed via 
-                  <span className="text-primary font-semibold ml-1">Instant Auto-Payment</span>
-                </p>
-              </div>
-              
-              <div className="bg-primary/10 rounded-xl p-4 border border-primary/20">
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-1">
-                  Amount Credited
-                </p>
-                <p className="font-display font-bold text-2xl text-primary tabular-nums">
-                  ₹{Math.round(payoutAmount)}
-                </p>
-              </div>
-              
-              <p className="text-xs text-muted-foreground">
-                Processing time: ~3-5 seconds
+      {/* ─── Step 4: Verdict ─── */}
+      {step === "verdict" && trigger && (
+        <div
+          className={`rounded-2xl border-2 p-6 space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-500 ${
+            verdict === "PAY"
+              ? "border-primary bg-primary/5"
+              : verdict === "PARTIAL"
+              ? "border-amber bg-amber-light/30"
+              : "border-coral bg-coral-light/30"
+          }`}
+        >
+          <div className="flex items-center gap-4">
+            {verdict === "PAY" && <CheckCircle2Badge className="w-10 h-10 text-primary" />}
+            {verdict === "PARTIAL" && <Minus className="w-10 h-10 text-amber" />}
+            {verdict === "REJECT" && <XCircle className="w-10 h-10 text-coral" />}
+            <div>
+              <h3 className="font-display font-bold text-xl">
+                {verdict === "PAY" && "Claim Approved"}
+                {verdict === "PARTIAL" && "Partial Payout"}
+                {verdict === "REJECT" && "Claim Rejected"}
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                Council consensus: {payCount}/{agents.length} agents voted PAY · {consensusScore}% confidence
               </p>
             </div>
           </div>
-        </div>
-      )}
 
-      {/* Razorpay Accurate Simulation */}
-      {showRazorpay && (
-         <RazorpaySimulator 
-            amount={Math.round(payoutAmount)} 
-            onSuccess={async () => {
-               setShowRazorpay(false);
-               
-               try {
-                 // Record the simulated claim to the backend so it shows up in Claims / Payouts tabs
-                 await fetch(`http://localhost:3001/api/dashboard/record-simulation/${localStorage.getItem('userId') || 'user_demo_1'}`, {
+          <div className="grid grid-cols-3 gap-3">
+            <div className="bg-card rounded-xl p-4 text-center border border-border">
+              <p className="text-[9px] font-semibold tracking-widest text-muted-foreground mb-1">PAYOUT</p>
+              <p className="font-display font-bold text-xl tabular-nums text-primary">
+                {(verdict === "PAY" || verdict === "PARTIAL") && payoutAmount > 0 ? "₹" + Math.round(payoutAmount) : "—"}
+              </p>
+            </div>
+            <div className="bg-card rounded-xl p-4 text-center border border-border">
+              <p className="text-[9px] font-semibold tracking-widest text-muted-foreground mb-1">CONFIDENCE</p>
+              <p className="font-display font-bold text-xl tabular-nums">{consensusScore}%</p>
+            </div>
+            <div className="bg-card rounded-xl p-4 text-center border border-border">
+              <p className="text-[9px] font-semibold tracking-widest text-muted-foreground mb-1">PROCESSING</p>
+              <p className="font-display font-bold text-xl tabular-nums">~3-5s</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <Button onClick={reset} variant="outline" className="flex-1">
+              <RotateCcw className="w-3.5 h-3.5 mr-1.5" />
+              Try Another
+            </Button>
+            <Button 
+              onClick={handleDisburse}
+              variant="default" 
+              className="flex-1"
+              disabled={verdict === "REJECT"}
+            >
+              <Zap className="w-3.5 h-3.5 mr-1.5" />
+              {verdict === "PAY" ? "Disburse to UPI" : verdict === "PARTIAL" ? "Disburse to UPI" : "View Details"}
+            </Button>
+          </div>
+
+          {/* Wallet Modal */}
+          {showWalletModal && (
+            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
+              <div className="bg-card border border-border rounded-2xl p-8 max-w-sm w-full mx-4 animate-in fade-in scale-in-95 duration-300">
+                <div className="text-center space-y-6">
+                  <div className="flex justify-center">
+                    <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center animate-bounce">
+                      <CheckCircle2Icon className="w-8 h-8 text-primary" />
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <h3 className="font-display font-bold text-xl text-foreground">
+                      Claimed Added to Wallet
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      Your payout has been successfully disbursed
+                    </p>
+                  </div>
+                  
+                  <div className="bg-primary/10 rounded-xl p-4 border border-primary/20">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-1">
+                      Amount Credited
+                    </p>
+                    <p className="font-display font-bold text-2xl text-primary tabular-nums">
+                      ₹{Math.round(payoutAmount)}
+                    </p>
+                  </div>
+                  
+                  <p className="text-xs text-muted-foreground">
+                    Processing time: ~3-5 seconds
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Razorpay Accurate Simulation */}
+          {showRazorpay && (
+            <RazorpaySimulator 
+              amount={Math.round(payoutAmount)} 
+              onSuccess={async () => {
+                setShowRazorpay(false);
+                
+                try {
+                  // Record the simulated claim to the backend so it shows up in Claims / Payouts tabs
+                  await fetch(`http://localhost:3001/api/dashboard/record-simulation/${localStorage.getItem('userId') || 'user_demo_1'}`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
-                       trigger: `${trigger?.label} — ${trigger?.location?.split(",")[0]}`,
-                       amount: payoutAmount,
-                       status: "approved",
-                       expected: trigger?.expected || "",
-                       actual: trigger?.actual || "",
-                       agents: `${agents.filter(a => a.vote === "PAY").length}/5 PAY`,
-                       confidence: consensusScore,
-                       council: agents.map(a => ({
-                         name: a.name,
-                         id: a.id,
-                         vote: a.vote,
-                         confidence: a.confidence,
-                         finding: a.finding
-                       }))
+                      trigger: `${trigger?.label} — ${trigger?.location?.split(",")[0]}`,
+                      amount: payoutAmount,
+                      status: "approved",
+                      expected: trigger?.expected || "",
+                      actual: trigger?.actual || "",
+                      agents: `${agents.filter(a => a.vote === "PAY").length}/5 PAY`,
+                      confidence: consensusScore,
+                      council: agents.map(a => ({
+                        name: a.name,
+                        id: a.id,
+                        vote: a.vote,
+                        confidence: a.confidence,
+                        finding: a.finding
+                      }))
                     })
-                 });
-               } catch (err) {
-                 console.error("Failed to record simulation to backend", err);
-               }
+                  });
+                } catch (err) {
+                  console.error("Failed to record simulation to backend", err);
+                }
 
-               setShowWalletModal(true);
-               setTimeout(() => {
+                setShowWalletModal(true);
+                setTimeout(() => {
                   setShowWalletModal(false);
-                  reset();
-               }, 4000);
-            }} 
-         />
+                  if (autoMode) {
+                    setAutoMode(false); // Stop auto mode after disbursal
+                  } else {
+                    reset();
+                  }
+                }, 4000);
+              }} 
+            />
+          )}
+        </div>
       )}
     </div>
   );

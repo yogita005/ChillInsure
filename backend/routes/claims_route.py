@@ -42,11 +42,14 @@ def calculate_gps_distance(lat1: float, lng1: float, lat2: float, lng2: float) -
 
 def is_point_in_zone(lat: float, lng: float, zone_center_lat: float, zone_center_lng: float, zone_name: str) -> bool:
     """Check if GPS point is within geofence zone"""
-    # Zone definitions (center + radius in meters)
+    # Zone definitions (center + radius in meters) - Tamil Nadu (Chennai) zones
     zones = {
-        "hsr-layout": {"lat": 13.0827, "lng": 77.6055, "radius": 800, "name": "HSR Layout"},
-        "koramangala": {"lat": 12.9352, "lng": 77.6245, "radius": 750, "name": "Koramangala"},
-        "whitefield": {"lat": 12.9698, "lng": 77.7499, "radius": 900, "name": "Whitefield"},
+        "t. nagar": {"lat": 13.0329, "lng": 80.2404, "radius": 800, "name": "T. Nagar"},
+        "mylapore": {"lat": 13.0324, "lng": 80.2626, "radius": 750, "name": "Mylapore"},
+        "velachery": {"lat": 12.9789, "lng": 80.2277, "radius": 900, "name": "Velachery"},
+        "anna nagar": {"lat": 13.0900, "lng": 80.2100, "radius": 800, "name": "Anna Nagar"},
+        "adyar": {"lat": 13.0001, "lng": 80.2426, "radius": 750, "name": "Adyar"},
+        "nungambakkam": {"lat": 13.0515, "lng": 80.2376, "radius": 800, "name": "Nungambakkam"},
         "general": {"lat": zone_center_lat, "lng": zone_center_lng, "radius": 500, "name": "Zone"}
     }
     
@@ -54,7 +57,7 @@ def is_point_in_zone(lat: float, lng: float, zone_center_lat: float, zone_center
     distance = calculate_gps_distance(lat, lng, zone_info["lat"], zone_info["lng"])
     return distance <= zone_info["radius"]
 
-def validate_gps_trail(gps_trail: list, zone_lat: float, zone_lng: float, zone_name: str = "hsr-layout") -> dict:
+def validate_gps_trail(gps_trail: list, zone_lat: float, zone_lng: float, zone_name: str = "general") -> dict:
     """Zone Agent: Real geofence validation of GPS trail confirms presence in zone"""
     if not gps_trail or len(gps_trail) < 2:
         return {"verdict": "REJECT", "confidence": 50, "finding": "Insufficient GPS data - need at least 2 GPS points"}

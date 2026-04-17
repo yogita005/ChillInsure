@@ -84,7 +84,7 @@ curl -X POST http://localhost:3001/api/gigscore/calculate \
 ### Weekly Policy
 ```bash
 # Create weekly policy
-curl -X POST http://localhost:3001/api/policy/create \
+curl -X POST http://localhost:3001/api/policy/create \  
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -d '{"userId":"user123","zoneId":"zone456","coverageAmount":2000}'

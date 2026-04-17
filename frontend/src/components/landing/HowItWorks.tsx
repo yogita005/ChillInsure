@@ -19,7 +19,7 @@ const steps = [
   {
     icon: Brain,
     title: "AI Council validates",
-    desc: "Five specialized AI agents cross-verify your location, activity, and conditions.",
+    desc: "Seven specialized AI agents cross-verify your location, activity, and conditions for bulletproof accuracy.",
     num: "03",
     accent: "bg-sage-100 text-sage-700",
   },

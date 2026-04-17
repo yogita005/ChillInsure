@@ -35,9 +35,62 @@ const riskBadgeColors = {
   low: "bg-sage-100 text-primary",
 };
 
+// Mock Chennai weather, AQI, and civic data
+const mockChennaiAlerts = [
+  {
+    severity: "high" as const,
+    icon: "cloud-rain",
+    title: "Heavy rainfall incoming — T. Nagar",
+    desc: "IMD forecast: 45mm+ rainfall expected in next 3 hours. Your delivery zone may be significantly affected.",
+    time: "8 min ago",
+    action: "Policy will auto-trigger if threshold met",
+    probability: "94%",
+  },
+  {
+    severity: "medium" as const,
+    icon: "wind",
+    title: "AQI rising — Mylapore zone",
+    desc: "AQI currently at 285 and climbing. Threshold trigger at 300. Air quality deteriorating rapidly.",
+    time: "22 min ago",
+    action: "Monitoring — 87% chance of trigger in next 2 hours",
+    probability: "87%",
+  },
+  {
+    severity: "medium" as const,
+    icon: "thermometer",
+    title: "Heat index alert — Velachery",
+    desc: "Temperature reached 39°C with high humidity (82%). Heat index at 43°C — worker safety concern.",
+    time: "35 min ago",
+    action: "Extra precaution recommended",
+    probability: "72%",
+  },
+  {
+    severity: "low" as const,
+    icon: "droplets",
+    title: "Waterlogging reported — Triplicane junction",
+    desc: "Minor waterlogging at key delivery points. Traffic delays expected but orders still fulfillable.",
+    time: "1 hour ago",
+    action: "Monitoring — low trigger probability",
+    probability: "23%",
+  },
+  {
+    severity: "low" as const,
+    icon: "radio",
+    title: "Civic status normal — Chennai",
+    desc: "No curfews, strikes, or major disruptions detected. Regular delivery operations proceeding.",
+    time: "Just now",
+    action: "Monitoring — no trigger needed",
+    probability: "5%",
+  },
+];
+
 export function AlertsView() {
-  const { alerts, loading, error, zoneRiskMultiplier = 1.0, zoneRiskLabel = "medium", city = "Your Zone", refetch } = useAlerts();
+  const { alerts: fetchedAlerts, loading, error, zoneRiskMultiplier = 1.0, zoneRiskLabel = "medium", city = "Chennai", refetch } = useAlerts();
   const [selectedSeverity, setSelectedSeverity] = useState<"all" | "high" | "medium" | "low">("all");
+  
+  // Always use mock Chennai alerts - they're the canonical demo data
+  // Only use fetched alerts if they have multiple items (more than just fallback)
+  const alerts = (fetchedAlerts && fetchedAlerts.length > 2) ? fetchedAlerts : mockChennaiAlerts;
 
   const filteredAlerts = selectedSeverity === "all" 
     ? alerts 

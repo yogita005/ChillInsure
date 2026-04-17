@@ -1,4 +1,4 @@
-import { MapPin, Activity, Eye, Globe, ShieldCheck, Brain } from "lucide-react";
+import { MapPin, Activity, Eye, Globe, ShieldCheck, Brain, Building } from "lucide-react";
 import { useReveal } from "@/hooks/use-reveal";
 
 const agents = [
@@ -7,6 +7,8 @@ const agents = [
   { icon: Eye, name: "Behavior Agent", role: "Detects impossible movements, speed anomalies, or timing conflicts", color: "bg-coral-light text-coral", confidence: "88%" },
   { icon: Globe, name: "Reality Agent", role: "Corroborates conditions with IMD, CPCB, and satellite data", color: "bg-secondary text-secondary-foreground", confidence: "96%" },
   { icon: ShieldCheck, name: "Trust Agent", role: "Calculates credibility score using ML models and claim history", color: "bg-sage-100 text-primary", confidence: "92%" },
+  { icon: Building, name: "Store Agent", role: "Verifies whether nearby dark stores or fulfillment centers were disrupted, causing genuine order loss and reduced worker earnings", color: "bg-amber-light text-amber", confidence: "90%" },
+  { icon: Brain, name: "Verification Agent", role: "Performs final cross-check of all evidence and council consistency", color: "bg-primary/10 text-primary", confidence: "97%" },
 ];
 
 export function FeaturesSection() {
@@ -23,7 +25,7 @@ export function FeaturesSection() {
           <div>
             <p className="text-sm font-medium text-primary mb-3 tracking-wide uppercase">AI Council</p>
             <h2 className="font-display text-3xl sm:text-4xl font-bold mb-4 text-balance">
-              Five agents. One fair decision.
+              Seven agents. One fair decision.
             </h2>
             <p className="text-muted-foreground max-w-lg text-pretty">
               Every claim is evaluated by a council of specialized AI agents — ensuring accuracy and eliminating fraud without penalizing honest workers.
@@ -38,7 +40,7 @@ export function FeaturesSection() {
           </div>
         </div>
 
-        <div ref={refCards} className="reveal grid sm:grid-cols-2 lg:grid-cols-5 gap-4 stagger-children">
+        <div ref={refCards} className="reveal grid sm:grid-cols-2 lg:grid-cols-7 gap-4 stagger-children">
           {agents.map((agent) => (
             <div
               key={agent.name}
