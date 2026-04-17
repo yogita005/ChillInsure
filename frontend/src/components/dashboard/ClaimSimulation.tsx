@@ -314,6 +314,87 @@ function ConsensusRing({ score, size = 120 }: { score: number; size?: number }) 
   );
 }
 
+/* Local UI Simulation of Razorpay UI to avoid key validation failures */
+function RazorpaySimulator({ amount, onSuccess }: { amount: number, onSuccess: () => void }) {
+  const [status, setStatus] = useState<"processing" | "success" | "done">("processing");
+
+  useEffect(() => {
+    const timer1 = setTimeout(() => {
+      setStatus("success");
+    }, 2000);
+    const timer2 = setTimeout(() => {
+      setStatus("done");
+      onSuccess();
+    }, 3500);
+    return () => { clearTimeout(timer1); clearTimeout(timer2); };
+  }, [onSuccess]);
+
+  if (status === "done") return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 font-sans backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="bg-white max-w-[380px] w-full rounded-md shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 relative">
+        {/* Header */}
+        <div className="bg-[#059669] text-white p-5 flex items-center justify-between shadow-sm">
+          <div className="flex items-center gap-3">
+             <div className="w-9 h-9 bg-white rounded-sm flex items-center justify-center text-[#059669] font-bold text-lg shadow-sm">
+                CH
+             </div>
+             <div>
+                <h3 className="font-semibold text-base leading-tight">ChillInsure</h3>
+                <p className="text-white/80 text-xs mt-0.5 font-medium">Claim Payout</p>
+             </div>
+          </div>
+          <div className="text-right pl-4">
+             <div className="text-xs text-white/80 font-medium">Amount</div>
+             <div className="font-bold text-lg tabular-nums tracking-tight">₹{amount}</div>
+          </div>
+        </div>
+        
+        {/* Body */}
+        <div className="p-8 pb-10 flex flex-col items-center justify-center min-h-[320px] bg-white relative">
+           {status === "processing" ? (
+              <div className="flex flex-col items-center space-y-5 w-full animate-in fade-in duration-300">
+                 <div className="relative flex justify-center items-center">
+                     <div className="w-14 h-14 border-[3px] border-gray-100 border-t-[#059669] rounded-full animate-spin" />
+                     <div className="absolute w-8 h-8 bg-green-50 rounded-full animate-pulse opacity-50" />
+                 </div>
+                 <div className="text-center space-y-1.5 w-full">
+                     <p className="text-gray-800 font-semibold text-sm">Processing Payment</p>
+                     <p className="text-xs text-gray-500 max-w-[200px] mx-auto leading-relaxed">
+                        Please don't refresh the page or press back button
+                     </p>
+                 </div>
+              </div>
+           ) : (
+              <div className="flex flex-col items-center space-y-4 animate-in zoom-in-50 fade-in duration-300 w-full">
+                 <div className="relative">
+                     <div className="absolute inset-0 bg-green-400 rounded-full blur-md opacity-20 animate-pulse" />
+                     <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center relative shadow-sm border border-green-100">
+                        <CheckCircle2Icon className="w-10 h-10 text-[#059669]" />
+                     </div>
+                 </div>
+                 <div className="text-center space-y-1">
+                     <p className="text-[#059669] font-bold text-lg">Payment Successful</p>
+                     <p className="text-xs text-gray-500 font-medium tabular-nums">ID: pay_{Math.random().toString(36).substring(2, 10).toUpperCase()}</p>
+                 </div>
+              </div>
+           )}
+        </div>
+
+        {/* Footer */}
+        <div className="bg-gray-50/80 border-t border-gray-100 p-3.5 flex justify-center items-center gap-1.5">
+            <ShieldCheck className="w-3.5 h-3.5 text-gray-400" />
+            <span className="text-[11px] text-gray-500 font-medium uppercase tracking-wider">Secured by</span>
+            <span className="text-sm font-bold text-[#338be8] tracking-tight ml-0.5 flex items-center">
+               <span className="italic font-black pr-0.5">R</span>azorpay
+            </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function ClaimSimulation() {
   const [step, setStep] = useState<Step>("select");
   const [selectedTrigger, setSelectedTrigger] = useState<string | null>(null);
@@ -325,6 +406,7 @@ export function ClaimSimulation() {
   const [payoutAmount, setPayoutAmount] = useState(0);
   const [gpsTrail, setGpsTrail] = useState<any[]>([]);
   const [showWalletModal, setShowWalletModal] = useState(false);
+  const [showRazorpay, setShowRazorpay] = useState(false);
 
   const { verifyClaim, loading: verifying, error } = useClaimVerification();
   const trigger = triggers.find((t) => t.id === selectedTrigger);
@@ -340,15 +422,24 @@ export function ClaimSimulation() {
     setPayoutAmount(0);
     setGpsTrail([]);
     setShowWalletModal(false);
+    setShowRazorpay(false);
   }, []);
 
   const handleDisburse = useCallback(() => {
     if (verdict === "PAY" || verdict === "PARTIAL") {
-      setShowWalletModal(true);
-      // Auto-close after 3 seconds
-      setTimeout(() => setShowWalletModal(false), 3000);
+      setShowRazorpay(true);
     }
   }, [verdict]);
+
+  // Auto-trigger payout 2 seconds after verdict is reached
+  useEffect(() => {
+    if (step === "verdict" && (verdict === "PAY" || verdict === "PARTIAL")) {
+      const timer = setTimeout(() => {
+        handleDisburse();
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [step, verdict, handleDisburse]);
 
   /* Detection phase */
   useEffect(() => {
@@ -783,6 +874,14 @@ export function ClaimSimulation() {
                 </div>
               </div>
             )}
+
+            {/* Added Reset button for when verdict is done */}
+            {step === "verdict" && (
+              <Button onClick={reset} variant="outline" className="w-full mt-2 border-border/50 bg-card/50">
+                <RotateCcw className="w-4 h-4 mr-2" />
+                Try Another Simulation
+              </Button>
+            )}
           </div>
 
           {/* GPS Map Visualization */}
@@ -803,103 +902,84 @@ export function ClaimSimulation() {
         </div>
       )}
 
-      {/* ─── Step 4: Verdict ─── */}
-      {step === "verdict" && trigger && (
-        <div
-          className={`rounded-2xl border-2 p-6 space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-500 ${
-            verdict === "PAY"
-              ? "border-primary bg-primary/5"
-              : verdict === "PARTIAL"
-              ? "border-amber bg-amber-light/30"
-              : "border-coral bg-coral-light/30"
-          }`}
-        >
-          <div className="flex items-center gap-4">
-            {verdict === "PAY" && <CheckCircle2Badge className="w-10 h-10 text-primary" />}
-            {verdict === "PARTIAL" && <Minus className="w-10 h-10 text-amber" />}
-            {verdict === "REJECT" && <XCircle className="w-10 h-10 text-coral" />}
-            <div>
-              <h3 className="font-display font-bold text-xl">
-                {verdict === "PAY" && "Claim Approved"}
-                {verdict === "PARTIAL" && "Partial Payout"}
-                {verdict === "REJECT" && "Claim Rejected"}
-              </h3>
-              <p className="text-sm text-muted-foreground">
-                Council consensus: {payCount}/5 agents voted PAY · {consensusScore}% confidence
-              </p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-3 gap-3">
-            <div className="bg-card rounded-xl p-4 text-center border border-border">
-              <p className="text-[9px] font-semibold tracking-widest text-muted-foreground mb-1">PAYOUT</p>
-              <p className="font-display font-bold text-xl tabular-nums text-primary">
-                {(verdict === "PAY" || verdict === "PARTIAL") && payoutAmount > 0 ? "₹" + Math.round(payoutAmount) : "—"}
-              </p>
-            </div>
-            <div className="bg-card rounded-xl p-4 text-center border border-border">
-              <p className="text-[9px] font-semibold tracking-widest text-muted-foreground mb-1">CONFIDENCE</p>
-              <p className="font-display font-bold text-xl tabular-nums">{consensusScore}%</p>
-            </div>
-            <div className="bg-card rounded-xl p-4 text-center border border-border">
-              <p className="text-[9px] font-semibold tracking-widest text-muted-foreground mb-1">PROCESSING</p>
-              <p className="font-display font-bold text-xl tabular-nums">~3-5s</p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <Button onClick={reset} variant="outline" className="flex-1">
-              <RotateCcw className="w-3.5 h-3.5 mr-1.5" />
-              Try Another
-            </Button>
-            <Button 
-              onClick={handleDisburse}
-              variant="default" 
-              className="flex-1"
-              disabled={verdict === "REJECT"}
-            >
-              <Zap className="w-3.5 h-3.5 mr-1.5" />
-              {verdict === "PAY" ? "Disburse to UPI" : verdict === "PARTIAL" ? "Disburse to UPI" : "View Details"}
-            </Button>
-          </div>
-
-          {/* Wallet Modal */}
-          {showWalletModal && (
-            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
-              <div className="bg-card border border-border rounded-2xl p-8 max-w-sm w-full mx-4 animate-in fade-in scale-in-95 duration-300">
-                <div className="text-center space-y-6">
-                  <div className="flex justify-center">
-                    <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center animate-bounce">
-                      <CheckCircle2Icon className="w-8 h-8 text-primary" />
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <h3 className="font-display font-bold text-xl text-foreground">
-                      Claimed Added to Wallet
-                    </h3>
-                    <p className="text-sm text-muted-foreground">
-                      Your payout has been successfully disbursed
-                    </p>
-                  </div>
-                  
-                  <div className="bg-primary/10 rounded-xl p-4 border border-primary/20">
-                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-1">
-                      Amount Credited
-                    </p>
-                    <p className="font-display font-bold text-2xl text-primary tabular-nums">
-                      ₹{Math.round(payoutAmount)}
-                    </p>
-                  </div>
-                  
-                  <p className="text-xs text-muted-foreground">
-                    Processing time: ~3-5 seconds
-                  </p>
+      {/* ─── Modals (Wallet & Razorpay) ─── */}
+      {showWalletModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
+          <div className="bg-card border border-border rounded-2xl p-8 max-w-sm w-full mx-4 animate-in fade-in scale-in-95 duration-300">
+            <div className="text-center space-y-6">
+              <div className="flex justify-center">
+                <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center animate-bounce">
+                  <CheckCircle2Icon className="w-8 h-8 text-primary" />
                 </div>
               </div>
+              
+              <div className="space-y-2">
+                <h3 className="font-display font-bold text-xl text-foreground">
+                  Claim Added to Wallet
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  Your payout has been successfully disbursed via 
+                  <span className="text-primary font-semibold ml-1">Instant Auto-Payment</span>
+                </p>
+              </div>
+              
+              <div className="bg-primary/10 rounded-xl p-4 border border-primary/20">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-1">
+                  Amount Credited
+                </p>
+                <p className="font-display font-bold text-2xl text-primary tabular-nums">
+                  ₹{Math.round(payoutAmount)}
+                </p>
+              </div>
+              
+              <p className="text-xs text-muted-foreground">
+                Processing time: ~3-5 seconds
+              </p>
             </div>
-          )}
+          </div>
         </div>
+      )}
+
+      {/* Razorpay Accurate Simulation */}
+      {showRazorpay && (
+         <RazorpaySimulator 
+            amount={Math.round(payoutAmount)} 
+            onSuccess={async () => {
+               setShowRazorpay(false);
+               
+               try {
+                 // Record the simulated claim to the backend so it shows up in Claims / Payouts tabs
+                 await fetch(`http://localhost:3001/api/dashboard/record-simulation/${localStorage.getItem('userId') || 'user_demo_1'}`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                       trigger: `${trigger?.label} — ${trigger?.location?.split(",")[0]}`,
+                       amount: payoutAmount,
+                       status: "approved",
+                       expected: trigger?.expected || "",
+                       actual: trigger?.actual || "",
+                       agents: `${agents.filter(a => a.vote === "PAY").length}/5 PAY`,
+                       confidence: consensusScore,
+                       council: agents.map(a => ({
+                         name: a.name,
+                         id: a.id,
+                         vote: a.vote,
+                         confidence: a.confidence,
+                         finding: a.finding
+                       }))
+                    })
+                 });
+               } catch (err) {
+                 console.error("Failed to record simulation to backend", err);
+               }
+
+               setShowWalletModal(true);
+               setTimeout(() => {
+                  setShowWalletModal(false);
+                  reset();
+               }, 4000);
+            }} 
+         />
       )}
     </div>
   );

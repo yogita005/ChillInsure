@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { CheckCircle2, Clock, XCircle, MapPin, Briefcase, Timer, Globe, ShieldCheck, X, Loader2 } from "lucide-react";
+import { CheckCircle2, Clock, XCircle, MapPin, Briefcase, Timer, Globe, ShieldCheck, X, Loader2, Zap } from "lucide-react";
 import { useDashboardClaims, type DashboardClaim } from "@/hooks/use-dashboard";
 
 const statusConfig = {
@@ -170,7 +170,11 @@ export function ClaimsView() {
             {[
               { label: "EXPECTED", value: selected.expected },
               { label: "ACTUAL", value: selected.actual },
-              { label: "PAYOUT", value: selected.amount, highlight: true },
+              { 
+                label: selected.trigger.includes("(Auto Pay)") ? "PAYOUT (AUTO)" : "PAYOUT", 
+                value: selected.amount, 
+                highlight: true 
+              },
             ].map((item) => (
               <div
                 key={item.label}
@@ -185,6 +189,16 @@ export function ClaimsView() {
               </div>
             ))}
           </div>
+
+          {selected.trigger.includes("(Auto Pay)") && (
+            <div className="bg-primary/10 border border-primary/30 rounded-xl px-4 py-2.5 flex items-center gap-3 animate-in fade-in slide-in-from-right-2">
+               <Zap className="w-4 h-4 text-primary fill-primary/20" />
+               <div className="flex-1">
+                 <p className="text-[10px] font-bold text-primary uppercase tracking-wider">Instant Auto-Payment</p>
+                 <p className="text-[11px] text-muted-foreground">Disbursed automatically via AI Council consensus</p>
+               </div>
+            </div>
+          )}
 
           {/* Consensus score */}
           <div className="bg-card rounded-2xl border border-border p-5">

@@ -196,7 +196,287 @@ async def get_dashboard_overview(user_id: str):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Dashboard overview error: {str(e)}")
+# ============================================================================
+# MOCK DATA STORE FOR DEMO
+# ============================================================================
 
+MOCK_CLAIMS = [
+    {
+        "id": "CLM-7842",
+        "date": "Mar 18, 2026",
+        "trigger": "Heavy rain — HSR Layout",
+        "status": "approved",
+        "amount": "₹620",
+        "expected": "₹1,200",
+        "actual": "₹310",
+        "agents": "5/5 PAY",
+        "confidence": 97,
+        "council": [
+            {
+                "name": "Zone Agent",
+                "agentId": "zone",
+                "vote": "PAY",
+                "confidence": 94,
+                "finding": "GPS confirmed within 200m of disruption zone for 47 min",
+            },
+            {
+                "name": "Work Agent",
+                "agentId": "work",
+                "vote": "PAY",
+                "confidence": 91,
+                "finding": "Completed 2 orders vs normal 8 — 75% reduction consistent with disruption",
+            },
+            {
+                "name": "Behavior Agent",
+                "agentId": "behavior",
+                "vote": "PAY",
+                "confidence": 88,
+                "finding": "Movement patterns consistent with heavy rain avoidance behavior",
+            },
+            {
+                "name": "Reality Agent",
+                "agentId": "reality",
+                "vote": "PAY",
+                "confidence": 96,
+                "finding": "IMD confirmed 84mm rainfall in sector; flood warning active",
+            },
+            {
+                "name": "Trust Agent",
+                "agentId": "trust",
+                "vote": "PAY",
+                "confidence": 92,
+                "finding": "Clean history — 14 months, 3 prior claims, all verified legitimate",
+            },
+        ],
+    },
+    {
+        "id": "CLM-7843",
+        "date": "Mar 17, 2026",
+        "trigger": "AQI > 300 — Koramangala",
+        "status": "approved",
+        "amount": "₹410",
+        "expected": "₹800",
+        "actual": "₹280",
+        "agents": "4/5 PAY",
+        "confidence": 89,
+        "council": [
+            {
+                "name": "Zone Agent",
+                "agentId": "zone",
+                "vote": "PAY",
+                "confidence": 91,
+                "finding": "All pings within 1.2km of AQI sensor station",
+            },
+            {
+                "name": "Work Agent",
+                "agentId": "work",
+                "vote": "PAY",
+                "confidence": 87,
+                "finding": "Delivery attempts fell 61% vs daily avg",
+            },
+            {
+                "name": "Behavior Agent",
+                "agentId": "behavior",
+                "vote": "PAY",
+                "confidence": 89,
+                "finding": "Reduced outdoor time by 40% — matches zone pattern",
+            },
+            {
+                "name": "Reality Agent",
+                "agentId": "reality",
+                "vote": "PAY",
+                "confidence": 93,
+                "finding": "CPCB station confirms AQI 318 at 14:30",
+            },
+            {
+                "name": "Trust Agent",
+                "agentId": "trust",
+                "vote": "PARTIAL",
+                "confidence": 78,
+                "finding": "2 prior claims this month — within normal range",
+            },
+        ],
+    },
+    {
+        "id": "CLM-7844",
+        "date": "Mar 14, 2026",
+        "trigger": "Flooding — Silk Board",
+        "status": "pending",
+        "amount": "₹530",
+        "expected": "₹950",
+        "actual": "₹420",
+        "agents": "3/5 PAY",
+        "confidence": 72,
+        "council": [
+            {
+                "name": "Zone Agent",
+                "agentId": "zone",
+                "vote": "PAY",
+                "confidence": 82,
+                "finding": "GPS near flood zone but 400m from epicenter",
+            },
+            {
+                "name": "Work Agent",
+                "agentId": "work",
+                "vote": "PAY",
+                "confidence": 78,
+                "finding": "Order volume dropped but some deliveries completed",
+            },
+            {
+                "name": "Behavior Agent",
+                "agentId": "behavior",
+                "vote": "PARTIAL",
+                "confidence": 65,
+                "finding": "Movement patterns partially consistent",
+            },
+            {
+                "name": "Reality Agent",
+                "agentId": "reality",
+                "vote": "PAY",
+                "confidence": 85,
+                "finding": "Flooding confirmed by BBMP civic data",
+            },
+            {
+                "name": "Trust Agent",
+                "agentId": "trust",
+                "vote": "PARTIAL",
+                "confidence": 70,
+                "finding": "Newer account — limited history for pattern analysis",
+            },
+        ],
+    },
+    {
+        "id": "CLM-7845",
+        "date": "Mar 10, 2026",
+        "trigger": "Heavy rain — Indiranagar",
+        "status": "approved",
+        "amount": "₹287",
+        "expected": "₹600",
+        "actual": "₹200",
+        "agents": "5/5 PAY",
+        "confidence": 95,
+        "council": [
+            {
+                "name": "Zone Agent",
+                "agentId": "zone",
+                "vote": "PAY",
+                "confidence": 96,
+                "finding": "Confirmed in Indiranagar throughout event",
+            },
+            {
+                "name": "Work Agent",
+                "agentId": "work",
+                "vote": "PAY",
+                "confidence": 94,
+                "finding": "Near complete work stoppage during rain window",
+            },
+            {
+                "name": "Behavior Agent",
+                "agentId": "behavior",
+                "vote": "PAY",
+                "confidence": 92,
+                "finding": "Speed/movement consistent with rain disruption",
+            },
+            {
+                "name": "Reality Agent",
+                "agentId": "reality",
+                "vote": "PAY",
+                "confidence": 97,
+                "finding": "IMD confirmed heavy rainfall; multiple sensors agree",
+            },
+            {
+                "name": "Trust Agent",
+                "agentId": "trust",
+                "vote": "PAY",
+                "confidence": 95,
+                "finding": "High trust score — excellent claim history",
+            },
+        ],
+    },
+    {
+        "id": "CLM-7846",
+        "date": "Mar 6, 2026",
+        "trigger": "Curfew — Whitefield",
+        "status": "rejected",
+        "amount": "—",
+        "expected": "₹700",
+        "actual": "₹700",
+        "agents": "1/5 PAY",
+        "confidence": 18,
+        "council": [
+            {
+                "name": "Zone Agent",
+                "agentId": "zone",
+                "vote": "REJECT",
+                "confidence": 22,
+                "finding": "GPS trail shows user was 8km outside curfew zone",
+            },
+            {
+                "name": "Work Agent",
+                "agentId": "work",
+                "vote": "REJECT",
+                "confidence": 15,
+                "finding": "Normal order activity detected — no disruption evident",
+            },
+            {
+                "name": "Behavior Agent",
+                "agentId": "behavior",
+                "vote": "REJECT",
+                "confidence": 12,
+                "finding": "Movement patterns identical to non-disruption days",
+            },
+            {
+                "name": "Reality Agent",
+                "agentId": "reality",
+                "vote": "PAY",
+                "confidence": 91,
+                "finding": "Curfew confirmed in Whitefield — event is real",
+            },
+            {
+                "name": "Trust Agent",
+                "agentId": "trust",
+                "vote": "REJECT",
+                "confidence": 8,
+                "finding": "User was not impacted — location mismatch flagged",
+            },
+        ],
+    },
+]
+
+MOCK_PAYOUTS = [
+    {
+        "id": "TXN-98271",
+        "date": "Mar 18, 2026",
+        "claim": "#1847",
+        "amount": "₹620",
+        "method": "UPI — arjun@oksbi",
+        "status": "Completed",
+    },
+    {
+        "id": "TXN-98264",
+        "date": "Mar 17, 2026",
+        "claim": "#1842",
+        "amount": "₹410",
+        "method": "UPI — arjun@oksbi",
+        "status": "Completed",
+    },
+    {
+        "id": "TXN-98251",
+        "date": "Mar 10, 2026",
+        "claim": "#1831",
+        "amount": "₹287",
+        "method": "UPI — arjun@oksbi",
+        "status": "Completed",
+    },
+    {
+        "id": "TXN-98230",
+        "date": "Mar 3, 2026",
+        "claim": "#1819",
+        "amount": "₹530",
+        "method": "UPI — arjun@oksbi",
+        "status": "Completed",
+    },
+]
 
 # ============================================================================
 # DASHBOARD CLAIMS
@@ -209,254 +489,11 @@ async def get_dashboard_claims(user_id: str):
     Each claim includes: id, date, trigger, status, earnings, and per-agent votes.
     """
     try:
-        claims = [
-            {
-                "id": "CLM-7842",
-                "date": "Mar 18, 2026",
-                "trigger": "Heavy rain — HSR Layout",
-                "status": "approved",
-                "amount": "₹620",
-                "expected": "₹1,200",
-                "actual": "₹310",
-                "agents": "5/5 PAY",
-                "confidence": 97,
-                "council": [
-                    {
-                        "name": "Zone Agent",
-                        "agentId": "zone",
-                        "vote": "PAY",
-                        "confidence": 94,
-                        "finding": "GPS confirmed within 200m of disruption zone for 47 min",
-                    },
-                    {
-                        "name": "Work Agent",
-                        "agentId": "work",
-                        "vote": "PAY",
-                        "confidence": 91,
-                        "finding": "Completed 2 orders vs normal 8 — 75% reduction consistent with disruption",
-                    },
-                    {
-                        "name": "Behavior Agent",
-                        "agentId": "behavior",
-                        "vote": "PAY",
-                        "confidence": 88,
-                        "finding": "Movement patterns consistent with heavy rain avoidance behavior",
-                    },
-                    {
-                        "name": "Reality Agent",
-                        "agentId": "reality",
-                        "vote": "PAY",
-                        "confidence": 96,
-                        "finding": "IMD confirmed 84mm rainfall in sector; flood warning active",
-                    },
-                    {
-                        "name": "Trust Agent",
-                        "agentId": "trust",
-                        "vote": "PAY",
-                        "confidence": 92,
-                        "finding": "Clean history — 14 months, 3 prior claims, all verified legitimate",
-                    },
-                ],
-            },
-            {
-                "id": "CLM-7843",
-                "date": "Mar 17, 2026",
-                "trigger": "AQI > 300 — Koramangala",
-                "status": "approved",
-                "amount": "₹410",
-                "expected": "₹800",
-                "actual": "₹280",
-                "agents": "4/5 PAY",
-                "confidence": 89,
-                "council": [
-                    {
-                        "name": "Zone Agent",
-                        "agentId": "zone",
-                        "vote": "PAY",
-                        "confidence": 91,
-                        "finding": "All pings within 1.2km of AQI sensor station",
-                    },
-                    {
-                        "name": "Work Agent",
-                        "agentId": "work",
-                        "vote": "PAY",
-                        "confidence": 87,
-                        "finding": "Delivery attempts fell 61% vs daily avg",
-                    },
-                    {
-                        "name": "Behavior Agent",
-                        "agentId": "behavior",
-                        "vote": "PAY",
-                        "confidence": 89,
-                        "finding": "Reduced outdoor time by 40% — matches zone pattern",
-                    },
-                    {
-                        "name": "Reality Agent",
-                        "agentId": "reality",
-                        "vote": "PAY",
-                        "confidence": 93,
-                        "finding": "CPCB station confirms AQI 318 at 14:30",
-                    },
-                    {
-                        "name": "Trust Agent",
-                        "agentId": "trust",
-                        "vote": "PARTIAL",
-                        "confidence": 78,
-                        "finding": "2 prior claims this month — within normal range",
-                    },
-                ],
-            },
-            {
-                "id": "CLM-7844",
-                "date": "Mar 14, 2026",
-                "trigger": "Flooding — Silk Board",
-                "status": "pending",
-                "amount": "₹530",
-                "expected": "₹950",
-                "actual": "₹420",
-                "agents": "3/5 PAY",
-                "confidence": 72,
-                "council": [
-                    {
-                        "name": "Zone Agent",
-                        "agentId": "zone",
-                        "vote": "PAY",
-                        "confidence": 82,
-                        "finding": "GPS near flood zone but 400m from epicenter",
-                    },
-                    {
-                        "name": "Work Agent",
-                        "agentId": "work",
-                        "vote": "PAY",
-                        "confidence": 78,
-                        "finding": "Order volume dropped but some deliveries completed",
-                    },
-                    {
-                        "name": "Behavior Agent",
-                        "agentId": "behavior",
-                        "vote": "PARTIAL",
-                        "confidence": 65,
-                        "finding": "Movement patterns partially consistent",
-                    },
-                    {
-                        "name": "Reality Agent",
-                        "agentId": "reality",
-                        "vote": "PAY",
-                        "confidence": 85,
-                        "finding": "Flooding confirmed by BBMP civic data",
-                    },
-                    {
-                        "name": "Trust Agent",
-                        "agentId": "trust",
-                        "vote": "PARTIAL",
-                        "confidence": 70,
-                        "finding": "Newer account — limited history for pattern analysis",
-                    },
-                ],
-            },
-            {
-                "id": "CLM-7845",
-                "date": "Mar 10, 2026",
-                "trigger": "Heavy rain — Indiranagar",
-                "status": "approved",
-                "amount": "₹287",
-                "expected": "₹600",
-                "actual": "₹200",
-                "agents": "5/5 PAY",
-                "confidence": 95,
-                "council": [
-                    {
-                        "name": "Zone Agent",
-                        "agentId": "zone",
-                        "vote": "PAY",
-                        "confidence": 96,
-                        "finding": "Confirmed in Indiranagar throughout event",
-                    },
-                    {
-                        "name": "Work Agent",
-                        "agentId": "work",
-                        "vote": "PAY",
-                        "confidence": 94,
-                        "finding": "Near complete work stoppage during rain window",
-                    },
-                    {
-                        "name": "Behavior Agent",
-                        "agentId": "behavior",
-                        "vote": "PAY",
-                        "confidence": 92,
-                        "finding": "Speed/movement consistent with rain disruption",
-                    },
-                    {
-                        "name": "Reality Agent",
-                        "agentId": "reality",
-                        "vote": "PAY",
-                        "confidence": 97,
-                        "finding": "IMD confirmed heavy rainfall; multiple sensors agree",
-                    },
-                    {
-                        "name": "Trust Agent",
-                        "agentId": "trust",
-                        "vote": "PAY",
-                        "confidence": 95,
-                        "finding": "High trust score — excellent claim history",
-                    },
-                ],
-            },
-            {
-                "id": "CLM-7846",
-                "date": "Mar 6, 2026",
-                "trigger": "Curfew — Whitefield",
-                "status": "rejected",
-                "amount": "—",
-                "expected": "₹700",
-                "actual": "₹700",
-                "agents": "1/5 PAY",
-                "confidence": 18,
-                "council": [
-                    {
-                        "name": "Zone Agent",
-                        "agentId": "zone",
-                        "vote": "REJECT",
-                        "confidence": 22,
-                        "finding": "GPS trail shows user was 8km outside curfew zone",
-                    },
-                    {
-                        "name": "Work Agent",
-                        "agentId": "work",
-                        "vote": "REJECT",
-                        "confidence": 15,
-                        "finding": "Normal order activity detected — no disruption evident",
-                    },
-                    {
-                        "name": "Behavior Agent",
-                        "agentId": "behavior",
-                        "vote": "REJECT",
-                        "confidence": 12,
-                        "finding": "Movement patterns identical to non-disruption days",
-                    },
-                    {
-                        "name": "Reality Agent",
-                        "agentId": "reality",
-                        "vote": "PAY",
-                        "confidence": 91,
-                        "finding": "Curfew confirmed in Whitefield — event is real",
-                    },
-                    {
-                        "name": "Trust Agent",
-                        "agentId": "trust",
-                        "vote": "REJECT",
-                        "confidence": 8,
-                        "finding": "User was not impacted — location mismatch flagged",
-                    },
-                ],
-            },
-        ]
-
         return {
             "status": "success",
             "userId": user_id,
-            "totalClaims": len(claims),
-            "claims": claims,
+            "totalClaims": len(MOCK_CLAIMS),
+            "claims": MOCK_CLAIMS,
             "timestamp": datetime.utcnow().isoformat(),
         }
 
@@ -474,44 +511,9 @@ async def get_dashboard_payouts(user_id: str):
     Dashboard Payouts — payout transaction history with summary stats.
     """
     try:
-        payouts = [
-            {
-                "id": "TXN-98271",
-                "date": "Mar 18, 2026",
-                "claim": "#1847",
-                "amount": "₹620",
-                "method": "UPI — arjun@oksbi",
-                "status": "Completed",
-            },
-            {
-                "id": "TXN-98264",
-                "date": "Mar 17, 2026",
-                "claim": "#1842",
-                "amount": "₹410",
-                "method": "UPI — arjun@oksbi",
-                "status": "Completed",
-            },
-            {
-                "id": "TXN-98251",
-                "date": "Mar 10, 2026",
-                "claim": "#1831",
-                "amount": "₹287",
-                "method": "UPI — arjun@oksbi",
-                "status": "Completed",
-            },
-            {
-                "id": "TXN-98230",
-                "date": "Mar 3, 2026",
-                "claim": "#1819",
-                "amount": "₹530",
-                "method": "UPI — arjun@oksbi",
-                "status": "Completed",
-            },
-        ]
-
         # Calculate summary
         total_amount = sum(
-            int(p["amount"].replace("₹", "").replace(",", "")) for p in payouts
+            int(p["amount"].replace("₹", "").replace(",", "")) for p in MOCK_PAYOUTS if p["status"] == "Completed"
         )
 
         return {
@@ -519,12 +521,81 @@ async def get_dashboard_payouts(user_id: str):
             "userId": user_id,
             "summary": {
                 "totalDisbursed": total_amount,
-                "totalPayouts": len(payouts),
+                "totalPayouts": len(MOCK_PAYOUTS),
                 "avgPayoutTimeMinutes": 4.2,
             },
-            "payouts": payouts,
+            "payouts": MOCK_PAYOUTS,
             "timestamp": datetime.utcnow().isoformat(),
         }
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Dashboard payouts error: {str(e)}")
+
+# ============================================================================
+# RECORD SIMULATION
+# ============================================================================
+
+from pydantic import BaseModel
+from typing import List, Dict, Any
+
+class SimulationRecord(BaseModel):
+    trigger: str
+    amount: float
+    status: str
+    expected: str
+    actual: str
+    agents: str
+    confidence: float
+    council: List[Dict[str, Any]]
+
+@router.post("/record-simulation/{user_id}")
+async def record_simulation(user_id: str, data: SimulationRecord):
+    """
+    Saves a claim from the Claim Simulation tool so it appears in the Claims list and Payouts.
+    """
+    try:
+        now = datetime.utcnow()
+        date_str = now.strftime("%b %d, %Y")
+        
+        # Determine the next claim ID
+        claim_id_num = 7847 + len(MOCK_CLAIMS) - 5
+        claim_id_str = f"CLM-{claim_id_num}"
+        txn_id_str = f"TXN-{random.randint(10000, 99999)}"
+
+        new_claim = {
+            "id": claim_id_str,
+            "date": date_str,
+            "trigger": f"{data.trigger} (Auto Pay)",
+            "status": data.status,
+            "amount": f"₹{int(data.amount)}" if data.amount > 0 else "—",
+            "expected": data.expected,
+            "actual": data.actual,
+            "agents": data.agents,
+            "confidence": int(data.confidence),
+            "council": [
+                {
+                    "name": agent.get("name", "Agent"),
+                    "agentId": agent.get("id"),
+                    "vote": agent.get("vote", "REJECT"),
+                    "confidence": int(agent.get("confidence", 0)),
+                    "finding": agent.get("finding", "Simulated result"),
+                } for agent in data.council
+            ]
+        }
+        
+        MOCK_CLAIMS.insert(0, new_claim)
+        
+        if data.status in ["approved", "pending"] and data.amount > 0:
+            new_payout = {
+                "id": txn_id_str,
+                "date": date_str,
+                "claim": f"#{claim_id_num}",
+                "amount": f"₹{int(data.amount)}",
+                "method": "Instant Auto-Payment",
+                "status": "Completed"
+            }
+            MOCK_PAYOUTS.insert(0, new_payout)
+
+        return {"status": "success", "message": "Simulation recorded"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to record simulation: {str(e)}")
