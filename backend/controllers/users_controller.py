@@ -19,10 +19,15 @@ async def handle_activate_policy(uid: str, coverage_per_day: int, premium_amount
     policy_doc = {
         "policy_id": policy_id,
         "uid": uid,
-        "week_start": now.isoformat(),
-        "week_end": week_end.isoformat(),
+        "week_start": now.date().isoformat(),
+        "week_end": week_end.date().isoformat(),
         "coverage_per_day": coverage_per_day,
         "weekly_premium": premium_amount,
+        "premium_breakdown": {
+            "base": premium_amount,
+            "zone_multiplier": 1.0,
+            "gigscore_multiplier": 1.0,
+        },
         "status": "active",
         "created_at": now.isoformat(),
     }

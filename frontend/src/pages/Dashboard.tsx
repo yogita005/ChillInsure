@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   Shield, LayoutDashboard, FileText, Banknote, AlertTriangle,
@@ -9,6 +9,7 @@ import { ClaimsView } from "@/components/dashboard/ClaimsView";
 import { PayoutsView } from "@/components/dashboard/PayoutsView";
 import { AlertsView } from "@/components/dashboard/AlertsView";
 import { ClaimSimulation } from "@/components/dashboard/ClaimSimulation";
+import { useUserProfile } from "@/hooks/use-dashboard";
 
 
 type Tab = "overview" | "simulate" | "claims" | "payouts" | "alerts";
@@ -40,14 +41,36 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const [active, setActive] = useState<Tab>("overview");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [authChecked, setAuthChecked] = useState(false);
+  const { profile, loading: profileLoading } = useUserProfile();
+
+  // ── Auth guard: redirect to landing if not logged in ──
+  useEffect(() => {
+    const userId = localStorage.getItem('userId');
+    const token = localStorage.getItem('accessToken');
+    if (!userId || !token) {
+      navigate('/', { replace: true });
+    } else {
+      setAuthChecked(true);
+    }
+  }, [navigate]);
+
+  const userName = profile?.name || (profileLoading ? "Loading…" : "User");
+  const userPlatform = profile?.platform ? `${profile.platform} Partner` : (profileLoading ? "" : "Gig Worker");
 
   const handleLogout = () => {
-    // Clear session data
+    // Clear all session data
     localStorage.removeItem('userId');
     localStorage.removeItem('policyId');
+    localStorage.removeItem('accessToken');
     // Redirect to landing page
-    navigate('/');
+    navigate('/', { replace: true });
   };
+
+  // Don't render anything until auth is confirmed
+  if (!authChecked) {
+    return null;
+  }
 
   return (
     <div className="dashboard-dark min-h-screen bg-background text-foreground flex">
@@ -148,8 +171,8 @@ const Dashboard = () => {
                 <User className="w-4 h-4 text-primary" />
               </div>
               <div className="hidden sm:block">
-                <p className="text-sm font-medium leading-none">Arjun Mehta</p>
-                <p className="text-xs text-muted-foreground">Zomato Partner</p>
+                <p className="text-sm font-medium leading-none">{userName}</p>
+                <p className="text-xs text-muted-foreground">{userPlatform}</p>
               </div>
             </div>
             <button

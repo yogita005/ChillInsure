@@ -20,6 +20,8 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
   const [authMode, setAuthMode] = useState<AuthMode>('register');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [phone, setPhone] = useState('');
   const [name, setName] = useState('');
   const [upiId, setUpiId] = useState('');
@@ -29,7 +31,6 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
   const [tenureMonths, setTenureMonths] = useState('12');
   const [userId, setUserId] = useState<string | null>(null);
   const [registeredEmail, setRegisteredEmail] = useState('');
-  const [generatedPassword, setGeneratedPassword] = useState<string>('');
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
   const [selectedPlanName, setSelectedPlanName] = useState<string>('');
@@ -48,31 +49,35 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
     e.preventDefault();
     setError('');
 
-    if (!email || !phone || !name || !pincode || !avgWeeklyEarnings || !workDaysPerWeek || !tenureMonths) {
+    if (!email || !password || !phone || !name || !pincode || !avgWeeklyEarnings || !workDaysPerWeek || !tenureMonths) {
       setError('Please fill all fields');
+      return;
+    }
+
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters');
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setError('Passwords do not match');
       return;
     }
 
     try {
       const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-      
-      // Generate password before sending
-      const generatedPass = Math.random().toString(36).substring(7);
-      setGeneratedPassword(generatedPass);
-      
+
       const response = await fetch(`${API_URL}/api/auth/register`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: name,
-          email: email,
-          password: generatedPass,
-          phone: phone,
+          name,
+          email,
+          password,
+          phone,
           platform: 'gig-app',
           zone: 'general',
-          pincode: pincode,
+          pincode,
           avg_weekly_earnings: parseInt(avgWeeklyEarnings),
           work_days_per_week: parseInt(workDaysPerWeek),
           tenure_months: parseInt(tenureMonths),
@@ -86,11 +91,9 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
 
       const data = await response.json();
       setRegisteredEmail(email);
-      if (data.otp_dev) {
-        setDevOtp(data.otp_dev);
-      }
-      // Show password screen before OTP
-      setStep('password-display');
+      if (data.otp_dev) setDevOtp(data.otp_dev);
+      // Go straight to OTP — no more 'password-display' step
+      setStep('otp');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Registration failed. Try again.');
     }
@@ -470,32 +473,38 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center p-4">
       <div className="w-full max-w-2xl">
         {/* Header */}
-        <div className="text-center mb-12">
-          <div className="flex items-center justify-center gap-3 mb-4">
-            <Shield className="h-8 w-8 text-blue-500" />
-            <h1 className="text-3xl font-bold text-white">GigGuardian</h1>
+        <div className="text-center mb-10">
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-700 shadow-lg shadow-blue-500/25 mb-5">
+            <Shield className="h-7 w-7 text-white" />
           </div>
-          <p className="text-gray-400">Insurance for every gig</p>
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent mb-2">ChillInsure</h1>
+          <p className="text-gray-400 text-sm">Parametric insurance for India's gig workforce</p>
         </div>
 
         {/* Step 0: Auth Mode Selection */}
         {step === 'auth-mode' && (
-          <Card className="bg-slate-800 border-slate-700">
-            <CardHeader>
-              <CardTitle className="text-white text-center text-2xl mb-2">Welcome to GigGuardian</CardTitle>
-              <CardDescription className="text-gray-400 text-center">Please choose how you'd like to proceed</CardDescription>
+          <Card className="bg-slate-800/80 backdrop-blur-xl border-slate-700/50 shadow-2xl shadow-black/20">
+            <CardHeader className="pb-2 pt-8">
+              <CardTitle className="text-white text-center text-2xl mb-1">Welcome back</CardTitle>
+              <CardDescription className="text-gray-400 text-center text-sm">Choose how you'd like to continue</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-3 px-8 pb-8">
               <Button
                 onClick={() => {
                   setAuthMode('register');
                   setStep('register');
                   setError('');
                 }}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white py-6 text-lg"
+                className="w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white py-6 text-base font-semibold rounded-xl shadow-lg shadow-blue-500/20 transition-all duration-200 hover:shadow-blue-500/30 hover:scale-[1.01] active:scale-[0.99]"
               >
+                <Shield className="w-4 h-4 mr-2" />
                 Create New Account
               </Button>
+              <div className="flex items-center gap-3 py-1">
+                <div className="flex-1 h-px bg-slate-700" />
+                <span className="text-xs text-slate-500 uppercase tracking-wider">or</span>
+                <div className="flex-1 h-px bg-slate-700" />
+              </div>
               <Button
                 onClick={() => {
                   setAuthMode('login');
@@ -503,7 +512,7 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
                   setError('');
                 }}
                 variant="outline"
-                className="w-full border-slate-600 text-white hover:bg-slate-700 py-6 text-lg"
+                className="w-full border-slate-600/50 text-gray-200 hover:bg-slate-700/50 hover:border-slate-500 py-6 text-base font-medium rounded-xl transition-all duration-200 hover:scale-[1.01] active:scale-[0.99]"
               >
                 Sign In Existing Account
               </Button>
@@ -513,10 +522,10 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
 
         {/* Step 1: Password Display */}
         {step === 'password-display' && (
-          <Card className="bg-slate-800 border-slate-700">
-            <CardHeader>
+          <Card className="bg-slate-800/80 backdrop-blur-xl border-slate-700/50 shadow-2xl shadow-black/20">
+            <CardHeader className="pt-8">
               <CardTitle className="text-white">Save Your Password</CardTitle>
-              <CardDescription className="text-gray-400">You'll need this to login later</CardDescription>
+              <CardDescription className="text-gray-400">You'll need this to log in later</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="bg-blue-500/10 border border-blue-500/20 p-4 rounded-lg space-y-3">
@@ -560,10 +569,10 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
 
         {/* Step 2: Login */}
         {step === 'login' && (
-          <Card className="bg-slate-800 border-slate-700">
-            <CardHeader>
+          <Card className="bg-slate-800/80 backdrop-blur-xl border-slate-700/50 shadow-2xl shadow-black/20">
+            <CardHeader className="pt-8">
               <CardTitle className="text-white">Sign In</CardTitle>
-              <CardDescription className="text-gray-400">Welcome back to your policy</CardDescription>
+              <CardDescription className="text-gray-400">Welcome back to ChillInsure</CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleLogin} className="space-y-4">
@@ -623,10 +632,10 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
 
         {/* Step 2: Register */}
         {step === 'register' && (
-          <Card className="bg-slate-800 border-slate-700">
-            <CardHeader>
+          <Card className="bg-slate-800/80 backdrop-blur-xl border-slate-700/50 shadow-2xl shadow-black/20">
+            <CardHeader className="pt-8">
               <CardTitle className="text-white">Create Your Account</CardTitle>
-              <CardDescription className="text-gray-400">Join thousands of gig workers</CardDescription>
+              <CardDescription className="text-gray-400">Join thousands of protected gig workers</CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleRegister} className="space-y-4">
@@ -657,6 +666,40 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
                     disabled={regLoading}
                     className="bg-slate-700 border-slate-600 text-white"
                   />
+                </div>
+
+                <div>
+                  <label className="text-sm text-gray-300 block mb-1">Password</label>
+                  <Input
+                    type={showPassword ? "text" : "password"}
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    disabled={regLoading}
+                    className="bg-slate-700 border-slate-600 text-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-sm text-gray-300 block mb-1">Confirm Password</label>
+                  <Input
+                    type={showPassword ? "text" : "password"}
+                    placeholder="••••••••"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    disabled={regLoading}
+                    className="bg-slate-700 border-slate-600 text-white"
+                  />
+                  <div className="mt-2 flex items-center">
+                    <input 
+                      type="checkbox" 
+                      id="showPassword" 
+                      checked={showPassword}
+                      onChange={() => setShowPassword(!showPassword)}
+                      className="mr-2 rounded bg-slate-700 border-slate-600" 
+                    />
+                    <label htmlFor="showPassword" className="text-xs text-gray-400 cursor-pointer">Show Password</label>
+                  </div>
                 </div>
 
                 <div>
@@ -951,7 +994,7 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
                 <Check className="h-8 w-8 text-green-400" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-white mb-2">Welcome to GigGuardian!</p>
+                <p className="text-2xl font-bold text-white mb-2">Welcome to ChillInsure!</p>
                 <p className="text-gray-400">Your policy is now active</p>
               </div>
               <div className="bg-slate-800 border border-slate-700 rounded-lg p-4 space-y-2 text-left">

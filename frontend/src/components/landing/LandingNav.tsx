@@ -5,9 +5,10 @@ import { useState, useEffect } from "react";
 
 interface LandingNavProps {
   onGetStarted?: () => void;
+  onLogin?: () => void;
 }
 
-export function LandingNav({ onGetStarted }: LandingNavProps) {
+export function LandingNav({ onGetStarted, onLogin }: LandingNavProps) {
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
@@ -40,9 +41,7 @@ export function LandingNav({ onGetStarted }: LandingNavProps) {
         </div>
 
         <div className="hidden md:flex items-center gap-3">
-          <Link to="/dashboard">
-            <Button variant="ghost" size="sm">Log in</Button>
-          </Link>
+          <Button variant="ghost" size="sm" onClick={onLogin}>Log in</Button>
           <Button size="sm" onClick={onGetStarted}>Get covered</Button>
         </div>
 

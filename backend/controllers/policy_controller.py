@@ -109,8 +109,8 @@ async def handle_create_policy(uid: str, coverage_per_day: int) -> dict:
     policy_doc = {
         "policy_id":            policy_id,
         "uid":                  uid,
-        "week_start":           now.isoformat(),
-        "week_end":             (now + timedelta(days=7)).isoformat(),
+        "week_start":           now.date().isoformat(),
+        "week_end":             (now + timedelta(days=7)).date().isoformat(),
         "coverage_per_day":     coverage_per_day,
         "weekly_premium":       result["weekly_premium"],
         "premium_breakdown":    result["breakdown"],

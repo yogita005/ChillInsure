@@ -100,7 +100,17 @@ def verify_otp(email: str, otp: str) -> bool:
 
     record = result.data[0]
 
-    expires_at = datetime.fromisoformat(record["expires_at"])
+    # Parse expires_at — handle Supabase's variable-length microseconds
+    expires_str = record["expires_at"]
+    try:
+        expires_at = datetime.fromisoformat(expires_str)
+    except ValueError:
+        # Supabase sometimes returns truncated microseconds (e.g. .64408 instead of .064408)
+        # Strip fractional seconds as a fallback
+        if "." in expires_str:
+            expires_str = expires_str.split(".")[0]
+        expires_at = datetime.fromisoformat(expires_str)
+
     if datetime.utcnow() > expires_at:
         return False
 

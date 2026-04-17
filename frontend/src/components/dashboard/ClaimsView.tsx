@@ -1,98 +1,6 @@
 import { useState } from "react";
-import { CheckCircle2, Clock, XCircle, MapPin, Briefcase, Timer, Globe, ShieldCheck, X } from "lucide-react";
-
-const claims = [
-  {
-    id: "CLM-7842",
-    date: "Mar 18, 2026",
-    trigger: "Heavy rain — HSR Layout",
-    status: "approved" as const,
-    amount: "₹620",
-    expected: "₹1,200",
-    actual: "₹310",
-    agents: "5/5 PAY",
-    confidence: 97,
-    council: [
-      { name: "Zone Agent", icon: MapPin, vote: "PAY" as const, confidence: 94, finding: "GPS confirmed within 200m of disruption zone for 47 min" },
-      { name: "Work Agent", icon: Briefcase, vote: "PAY" as const, confidence: 91, finding: "Completed 2 orders vs normal 8 — 75% reduction consistent with disruption" },
-      { name: "Behavior Agent", icon: Timer, vote: "PAY" as const, confidence: 88, finding: "Movement patterns consistent with heavy rain avoidance behavior" },
-      { name: "Reality Agent", icon: Globe, vote: "PAY" as const, confidence: 96, finding: "IMD confirmed 84mm rainfall in sector; flood warning active" },
-      { name: "Trust Agent", icon: ShieldCheck, vote: "PAY" as const, confidence: 92, finding: "Clean history — 14 months, 3 prior claims, all verified legitimate" },
-    ],
-  },
-  {
-    id: "CLM-7843",
-    date: "Mar 17, 2026",
-    trigger: "AQI > 300 — Koramangala",
-    status: "approved" as const,
-    amount: "₹410",
-    expected: "₹800",
-    actual: "₹280",
-    agents: "4/5 PAY",
-    confidence: 89,
-    council: [
-      { name: "Zone Agent", icon: MapPin, vote: "PAY" as const, confidence: 91, finding: "All pings within 1.2km of AQI sensor station" },
-      { name: "Work Agent", icon: Briefcase, vote: "PAY" as const, confidence: 87, finding: "Delivery attempts fell 61% vs daily avg" },
-      { name: "Behavior Agent", icon: Timer, vote: "PAY" as const, confidence: 89, finding: "Reduced outdoor time by 40% — matches zone pattern" },
-      { name: "Reality Agent", icon: Globe, vote: "PAY" as const, confidence: 93, finding: "CPCB station confirms AQI 318 at 14:30" },
-      { name: "Trust Agent", icon: ShieldCheck, vote: "PARTIAL" as const, confidence: 78, finding: "2 prior claims this month — within normal range" },
-    ],
-  },
-  {
-    id: "CLM-7844",
-    date: "Mar 14, 2026",
-    trigger: "Flooding — Silk Board",
-    status: "pending" as const,
-    amount: "₹530",
-    expected: "₹950",
-    actual: "₹420",
-    agents: "3/5 PAY",
-    confidence: 72,
-    council: [
-      { name: "Zone Agent", icon: MapPin, vote: "PAY" as const, confidence: 82, finding: "GPS near flood zone but 400m from epicenter" },
-      { name: "Work Agent", icon: Briefcase, vote: "PAY" as const, confidence: 78, finding: "Order volume dropped but some deliveries completed" },
-      { name: "Behavior Agent", icon: Timer, vote: "PARTIAL" as const, confidence: 65, finding: "Movement patterns partially consistent" },
-      { name: "Reality Agent", icon: Globe, vote: "PAY" as const, confidence: 85, finding: "Flooding confirmed by BBMP civic data" },
-      { name: "Trust Agent", icon: ShieldCheck, vote: "PARTIAL" as const, confidence: 70, finding: "Newer account — limited history for pattern analysis" },
-    ],
-  },
-  {
-    id: "CLM-7845",
-    date: "Mar 10, 2026",
-    trigger: "Heavy rain — Indiranagar",
-    status: "approved" as const,
-    amount: "₹287",
-    expected: "₹600",
-    actual: "₹200",
-    agents: "5/5 PAY",
-    confidence: 95,
-    council: [
-      { name: "Zone Agent", icon: MapPin, vote: "PAY" as const, confidence: 96, finding: "Confirmed in Indiranagar throughout event" },
-      { name: "Work Agent", icon: Briefcase, vote: "PAY" as const, confidence: 94, finding: "Near complete work stoppage during rain window" },
-      { name: "Behavior Agent", icon: Timer, vote: "PAY" as const, confidence: 92, finding: "Speed/movement consistent with rain disruption" },
-      { name: "Reality Agent", icon: Globe, vote: "PAY" as const, confidence: 97, finding: "IMD confirmed heavy rainfall; multiple sensors agree" },
-      { name: "Trust Agent", icon: ShieldCheck, vote: "PAY" as const, confidence: 95, finding: "High trust score — excellent claim history" },
-    ],
-  },
-  {
-    id: "CLM-7846",
-    date: "Mar 6, 2026",
-    trigger: "Curfew — Whitefield",
-    status: "rejected" as const,
-    amount: "—",
-    expected: "₹700",
-    actual: "₹700",
-    agents: "1/5 PAY",
-    confidence: 18,
-    council: [
-      { name: "Zone Agent", icon: MapPin, vote: "REJECT" as const, confidence: 22, finding: "GPS trail shows user was 8km outside curfew zone" },
-      { name: "Work Agent", icon: Briefcase, vote: "REJECT" as const, confidence: 15, finding: "Normal order activity detected — no disruption evident" },
-      { name: "Behavior Agent", icon: Timer, vote: "REJECT" as const, confidence: 12, finding: "Movement patterns identical to non-disruption days" },
-      { name: "Reality Agent", icon: Globe, vote: "PAY" as const, confidence: 91, finding: "Curfew confirmed in Whitefield — event is real" },
-      { name: "Trust Agent", icon: ShieldCheck, vote: "REJECT" as const, confidence: 8, finding: "User was not impacted — location mismatch flagged" },
-    ],
-  },
-];
+import { CheckCircle2, Clock, XCircle, MapPin, Briefcase, Timer, Globe, ShieldCheck, X, Loader2 } from "lucide-react";
+import { useDashboardClaims, type DashboardClaim } from "@/hooks/use-dashboard";
 
 const statusConfig = {
   approved: { icon: CheckCircle2, label: "Approved", class: "text-primary bg-sage-100" },
@@ -104,6 +12,14 @@ const voteColor = {
   PAY: "text-primary",
   PARTIAL: "text-amber",
   REJECT: "text-coral",
+};
+
+const agentIconMap: Record<string, React.ElementType> = {
+  zone: MapPin,
+  work: Briefcase,
+  behavior: Timer,
+  reality: Globe,
+  trust: ShieldCheck,
 };
 
 /* Consensus ring SVG */
@@ -136,8 +52,27 @@ function ConsensusRing({ score }: { score: number }) {
 }
 
 export function ClaimsView() {
+  const { claims, loading, error } = useDashboardClaims();
   const [filter, setFilter] = useState<"all" | "approved" | "pending" | "rejected">("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="w-6 h-6 text-primary animate-spin" />
+        <span className="ml-3 text-sm text-muted-foreground">Loading claims…</span>
+      </div>
+    );
+  }
+
+  if (error && claims.length === 0) {
+    return (
+      <div className="text-center py-20 text-muted-foreground">
+        <p>Unable to load claims data.</p>
+        <p className="text-xs mt-1">{error}</p>
+      </div>
+    );
+  }
 
   const filtered = filter === "all" ? claims : claims.filter((c) => c.status === filter);
   const selected = claims.find((c) => c.id === selectedId);
@@ -269,7 +204,7 @@ export function ClaimsView() {
             <p className="text-[10px] font-semibold tracking-widest text-muted-foreground mb-3">AI COUNCIL DECISIONS</p>
             <div className="space-y-2">
               {selected.council.map((agent) => {
-                const AgentIcon = agent.icon;
+                const AgentIcon = agentIconMap[agent.agentId] || MapPin;
                 return (
                   <div key={agent.name} className="bg-card rounded-xl border border-border p-4">
                     <div className="flex items-center justify-between mb-1.5">

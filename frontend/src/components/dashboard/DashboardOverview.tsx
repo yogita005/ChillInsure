@@ -1,20 +1,5 @@
-import { Shield, CloudRain, Banknote, TrendingUp, Activity, ArrowUpRight, ArrowDownRight } from "lucide-react";
-
-const stats = [
-  { label: "Active Policy", value: "Weather Shield", sub: "Expires in 4 days", icon: Shield, accent: "text-primary", trend: null },
-  { label: "Claims This Month", value: "3", sub: "2 approved, 1 pending", icon: CloudRain, accent: "text-amber", trend: "+1" },
-  { label: "Total Payouts", value: "₹1,847", sub: "+₹620 this week", icon: Banknote, accent: "text-primary", trend: "+34%" },
-  { label: "Trust Score", value: "94.2%", sub: "Excellent standing", icon: TrendingUp, accent: "text-primary", trend: "+2.1%" },
-];
-
-const recentActivity = [
-  { time: "2h ago", event: "Heavy rainfall detected in HSR Layout zone", type: "trigger" as const },
-  { time: "2h ago", event: "AI Council validated claim #1847 — PAY", type: "approved" as const },
-  { time: "2h ago", event: "₹620 disbursed to UPI", type: "payout" as const },
-  { time: "1d ago", event: "AQI threshold reached in Koramangala — claim #1842 filed", type: "trigger" as const },
-  { time: "1d ago", event: "Claim #1842 approved — ₹410 paid", type: "approved" as const },
-  { time: "5d ago", event: "Weekly premium ₹49 auto-deducted", type: "billing" as const },
-];
+import { Shield, CloudRain, Banknote, TrendingUp, Activity, ArrowUpRight, ArrowDownRight, Loader2 } from "lucide-react";
+import { useDashboardOverview } from "@/hooks/use-dashboard";
 
 const typeStyles = {
   trigger: "bg-amber-light text-amber",
@@ -31,6 +16,33 @@ const typeIcons = {
 };
 
 export function DashboardOverview() {
+  const { data, loading, error } = useDashboardOverview();
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="w-6 h-6 text-primary animate-spin" />
+        <span className="ml-3 text-sm text-muted-foreground">Loading dashboard…</span>
+      </div>
+    );
+  }
+
+  if (!data) {
+    return (
+      <div className="text-center py-20 text-muted-foreground">
+        <p>Unable to load dashboard data.</p>
+        {error && <p className="text-xs mt-1">{error}</p>}
+      </div>
+    );
+  }
+
+  const stats = [
+    { label: "Active Policy", value: data.policy.name, sub: `Expires in ${data.policy.expiresIn}`, icon: Shield, accent: "text-primary", trend: null },
+    { label: "Claims This Month", value: String(data.claims.total), sub: `${data.claims.approved} approved, ${data.claims.pending} pending`, icon: CloudRain, accent: "text-amber", trend: `+${data.claims.pending}` },
+    { label: "Total Payouts", value: `₹${data.payouts.totalAmount.toLocaleString()}`, sub: `+₹${data.payouts.thisWeek} this week`, icon: Banknote, accent: "text-primary", trend: data.payouts.thisWeekChange },
+    { label: "Trust Score", value: `${data.trustScore.score}%`, sub: data.trustScore.label, icon: TrendingUp, accent: "text-primary", trend: data.trustScore.change },
+  ];
+
   return (
     <div className="space-y-6">
       {/* Stats grid */}
@@ -63,9 +75,9 @@ export function DashboardOverview() {
         <p className="text-[10px] font-semibold tracking-widest text-muted-foreground mb-4">EARNINGS BREAKDOWN — THIS WEEK</p>
         <div className="grid grid-cols-3 gap-4 mb-4">
           {[
-            { label: "EXPECTED", value: "₹1,200", desc: "Normal week" },
-            { label: "ACTUAL", value: "₹310", desc: "Post-disruption" },
-            { label: "COVERED", value: "₹890", desc: "By ChillInsure", highlight: true },
+            { label: "EXPECTED", value: `₹${data.earnings.expected.toLocaleString()}`, desc: "Normal week" },
+            { label: "ACTUAL", value: `₹${data.earnings.actual.toLocaleString()}`, desc: "Post-disruption" },
+            { label: "COVERED", value: `₹${data.earnings.covered.toLocaleString()}`, desc: "By ChillInsure", highlight: true },
           ].map((item) => (
             <div
               key={item.label}
@@ -83,12 +95,12 @@ export function DashboardOverview() {
         </div>
         {/* Visual earnings bar */}
         <div className="h-3 rounded-full bg-muted overflow-hidden flex">
-          <div className="h-full bg-coral/60 rounded-l-full" style={{ width: "26%" }} title="Lost to weather" />
-          <div className="h-full bg-primary" style={{ width: "74%" }} title="Covered by ChillInsure" />
+          <div className="h-full bg-coral/60 rounded-l-full" style={{ width: `${100 - data.earnings.coveredPercentage}%` }} title="Lost to weather" />
+          <div className="h-full bg-primary" style={{ width: `${data.earnings.coveredPercentage}%` }} title="Covered by ChillInsure" />
         </div>
         <div className="flex justify-between text-[10px] text-muted-foreground mt-1.5">
-          <span>Lost: ₹310</span>
-          <span className="text-primary font-semibold">Recovered: ₹890 (74%)</span>
+          <span>Lost: ₹{data.earnings.actual.toLocaleString()}</span>
+          <span className="text-primary font-semibold">Recovered: ₹{data.earnings.covered.toLocaleString()} ({data.earnings.coveredPercentage}%)</span>
         </div>
       </div>
 
@@ -99,7 +111,7 @@ export function DashboardOverview() {
           <Activity className="w-4 h-4 text-muted-foreground" />
         </div>
         <div className="divide-y divide-border">
-          {recentActivity.map((item, i) => (
+          {data.recentActivity.map((item, i) => (
             <div key={i} className="px-5 py-3.5 flex items-start gap-3 hover:bg-muted/20 transition-colors">
               <span className={`mt-0.5 text-[10px] font-medium px-2 py-0.5 rounded-full whitespace-nowrap ${typeStyles[item.type]}`}>
                 {typeIcons[item.type]} {item.type}
