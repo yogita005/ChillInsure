@@ -17,6 +17,7 @@ from routes.alerts_route import router as alerts_router
 from routes.claims_route import router as claims_router
 from routes.dark_store_route import router as dark_store_router
 from routes.gig_protect_route import router as gig_protect_router
+from routes.dashboard_route import router as dashboard_router
 
 # Import services for initialization
 from services import weather_service, payout_service, zone_risk_service
@@ -74,6 +75,7 @@ app.include_router(users_router, prefix="/api/users", tags=["Users"])
 app.include_router(alerts_router, prefix="/api/alerts", tags=["Risk Alerts"])
 app.include_router(claims_router, prefix="/api/claims", tags=["Claims Verification"])
 app.include_router(dark_store_router, tags=["Dark Store Disruption"])
+app.include_router(dashboard_router, prefix="/api/dashboard", tags=["Dashboard"])
 
 # Health check endpoints
 @app.get("/")

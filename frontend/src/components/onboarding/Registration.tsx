@@ -48,7 +48,7 @@ export function Registration({ onSuccess }: RegistrationProps) {
     <div className="w-full max-w-md mx-auto">
       <Card>
         <CardHeader>
-          <CardTitle>Join GigGuardian</CardTitle>
+          <CardTitle>Join ChillInsure</CardTitle>
           <CardDescription>Register to get insurance protection for your gig work</CardDescription>
         </CardHeader>
         <CardContent>

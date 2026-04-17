@@ -37,3 +37,13 @@ ENV/
 # Logs
 logs/
 *.log
+
+# Package lock files (optional depending on team)
+package-lock.json
+yarn.lock
+
+# Coverage / testing
+coverage/
+
+# Mac system files (extra safety)
+.DS_Store?

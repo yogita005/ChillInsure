@@ -25,9 +25,13 @@ const Index = () => {
     setShowOnboarding(true);
   };
 
+  const handleLogin = () => {
+    setShowOnboarding(true);
+  };
+
   const handleOnboardingComplete = (userId: string, policyId: string) => {
     console.log('🎉 Onboarding complete!', { userId, policyId });
-    // Save to localStorage (replace with real auth later)
+    // Save to localStorage
     localStorage.setItem('userId', userId);
     localStorage.setItem('policyId', policyId);
     console.log('✅ Saved to localStorage:', { userId, policyId });
@@ -41,7 +45,7 @@ const Index = () => {
 
   return (
     <div className="min-h-screen">
-      <LandingNav onGetStarted={handleGetStarted} />
+      <LandingNav onGetStarted={handleGetStarted} onLogin={handleLogin} />
       <HeroSection onGetStarted={handleGetStarted} />
       <HowItWorks />
       <FeaturesSection />

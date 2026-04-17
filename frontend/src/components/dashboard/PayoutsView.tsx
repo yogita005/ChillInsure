@@ -1,12 +1,29 @@
-const payouts = [
-  { id: "TXN-98271", date: "Mar 18, 2026", claim: "#1847", amount: "₹620", method: "UPI — arjun@oksbi", status: "Completed" },
-  { id: "TXN-98264", date: "Mar 17, 2026", claim: "#1842", amount: "₹410", method: "UPI — arjun@oksbi", status: "Completed" },
-  { id: "TXN-98251", date: "Mar 10, 2026", claim: "#1831", amount: "₹287", method: "UPI — arjun@oksbi", status: "Completed" },
-  { id: "TXN-98230", date: "Mar 3, 2026", claim: "#1819", amount: "₹530", method: "UPI — arjun@oksbi", status: "Completed" },
-];
+import { Loader2 } from "lucide-react";
+import { useDashboardPayouts } from "@/hooks/use-dashboard";
 
 export function PayoutsView() {
-  const total = payouts.reduce((sum, p) => sum + parseInt(p.amount.replace(/[₹,]/g, "")), 0);
+  const { payouts, summary, loading, error } = useDashboardPayouts();
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="w-6 h-6 text-primary animate-spin" />
+        <span className="ml-3 text-sm text-muted-foreground">Loading payouts…</span>
+      </div>
+    );
+  }
+
+  if (error && payouts.length === 0) {
+    return (
+      <div className="text-center py-20 text-muted-foreground">
+        <p>Unable to load payouts data.</p>
+        <p className="text-xs mt-1">{error}</p>
+      </div>
+    );
+  }
+
+  const totalDisbursed = summary?.totalDisbursed ?? 0;
+  const avgPayoutTime = summary?.avgPayoutTimeMinutes ?? 0;
 
   return (
     <div className="space-y-6">
@@ -18,12 +35,12 @@ export function PayoutsView() {
       <div className="grid grid-cols-2 gap-4">
         <div className="bg-card rounded-2xl p-5 border border-border">
           <p className="text-[10px] font-semibold tracking-widest text-muted-foreground mb-1">TOTAL DISBURSED</p>
-          <p className="font-display font-bold text-2xl tabular-nums text-primary">₹{total.toLocaleString()}</p>
+          <p className="font-display font-bold text-2xl tabular-nums text-primary">₹{totalDisbursed.toLocaleString()}</p>
           <p className="text-xs text-muted-foreground mt-1">Across {payouts.length} payouts</p>
         </div>
         <div className="bg-card rounded-2xl p-5 border border-border">
           <p className="text-[10px] font-semibold tracking-widest text-muted-foreground mb-1">AVG. PAYOUT TIME</p>
-          <p className="font-display font-bold text-2xl tabular-nums">4.2 min</p>
+          <p className="font-display font-bold text-2xl tabular-nums">{avgPayoutTime} min</p>
           <p className="text-xs text-muted-foreground mt-1">From trigger to UPI credit</p>
         </div>
       </div>
