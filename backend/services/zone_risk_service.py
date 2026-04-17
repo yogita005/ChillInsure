@@ -52,3 +52,43 @@ def get_risk_label(pincode: str) -> str:
         return "medium"
     else:
         return "low"
+    
+
+# Maps pincodes to their zone names (used for disruption matching)
+PINCODE_TO_ZONE = {
+    "560034": "koramangala_bengaluru",
+    "560001": "mg_road_bengaluru",
+    "560095": "whitefield_bengaluru",
+    "560068": "jp_nagar_bengaluru",
+    "600001": "central_chennai",
+    "600096": "velachery_chennai",
+    "600042": "adyar_chennai",
+    "600020": "nungambakkam_chennai",
+    "400001": "south_mumbai",
+    "400069": "andheri_mumbai",
+    "400051": "bandra_mumbai",
+    "400078": "kurla_mumbai",
+    "110001": "connaught_place_delhi",
+    "110045": "dwarka_delhi",
+    "110092": "shahdara_delhi",
+    "110020": "saket_delhi",
+    "500001": "old_city_hyderabad",
+    "500081": "gachibowli_hyderabad",
+    "500034": "secunderabad_hyderabad",
+    "700001": "central_kolkata",
+    "700064": "salt_lake_kolkata",
+    "700041": "park_street_kolkata",
+}
+
+def detect_zone(pincode: str) -> dict:
+    zone = PINCODE_TO_ZONE.get(pincode, "unknown_zone")
+    risk = get_zone_risk(pincode)
+    label = get_risk_label(pincode)
+
+    return {
+        "pincode": pincode,
+        "zone": zone,
+        "risk_multiplier": risk,
+        "risk_label": label,
+        "zone_detected": zone != "unknown_zone"
+    }
